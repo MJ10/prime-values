@@ -51,8 +51,9 @@ uv run scripts/cluv_prime_rl.py sync mila
 ```
 
 `sync` checks out the current pushed commit, initializes all submodules, and
-runs `uv sync --all-extras` on the cluster. Cluv requires tracked changes to be
-committed before submission.
+runs `uv sync --all-extras` on the cluster. Dependencies use the isolated
+`$SCRATCH/.cache/prime-values-uv` cache instead of the shared home uv cache.
+Cluv requires tracked changes to be committed before submission.
 
 ## Submit a single-node experiment
 

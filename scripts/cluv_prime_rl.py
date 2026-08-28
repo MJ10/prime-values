@@ -42,7 +42,7 @@ async def sync_prime_rl(
     await remote.run(
         f"git -C {quoted_project_path} submodule update --init --recursive",
     )
-    uv_command = f"uv --directory={quoted_project_path} sync --all-extras"
+    uv_command = f'uv --cache-dir "$SCRATCH/.cache/prime-values-uv" --directory={quoted_project_path} sync --all-extras'
     await remote.run(f"bash --login -c {shlex.quote(uv_command)}")
     project_state.last_uv_sync_git_commit = current_git_commit
 
