@@ -160,6 +160,11 @@ cluster workflow. Before adding a cluster, use `cluv_prime_rl.py sh sacctmgr`
 and `cluv_prime_rl.py sh sinfo` as documented there; do not guess its account,
 partition, or GPU request syntax.
 
+On a first remote sync, an interrupted or incomplete uv cache entry can fail
+installation with a missing wheel `METADATA` file. Clean only the named package
+on the affected cluster (`ssh <cluster> "bash -lc 'uv cache clean <package>'"`)
+and retry the same cluv submission. Do not remove the whole cache or `.venv`.
+
 ## Summary
 
 | Command | Purpose | Typical use |
