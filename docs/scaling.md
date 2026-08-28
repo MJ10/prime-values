@@ -22,6 +22,7 @@ This page covers how to scale `prime-rl` from a single GPU to a 1000-GPU cluster
   - [`[deployment]` Block](#deployment-block)
   - [Examples](#examples)
   - [Custom Templates](#custom-templates)
+- [Cross-Cluster Submission with cluv](#cross-cluster-submission-with-cluv)
 - [Benchmarking](#benchmarking)
 
 ## Single-Node vs. Multi-Node Deployment
@@ -240,6 +241,14 @@ uv run rl @ my_config.toml --slurm.template-path path/to/my_template.sbatch.j2
 ```
 
 The default templates live under [`src/prime_rl/templates/`](https://github.com/PrimeIntellect-ai/prime-rl/tree/main/src/prime_rl/templates) — copy one as a starting point.
+
+## Cross-Cluster Submission with cluv
+
+The repository includes a [cluv workflow](cluv.md) for synchronizing the same
+commit and uv environment to multiple clusters. Use cluv's job submission for
+single-node runs. For multi-node runs, use `cluv run` to invoke prime-rl's own
+Slurm launcher on the remote login node so prime-rl remains responsible for the
+node topology.
 
 ## Benchmarking
 

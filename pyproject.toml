@@ -341,6 +341,36 @@ name = "pytorch-cu128-test"
 url = "https://download.pytorch.org/whl/test/cu128"
 explicit = true
 
+[tool.cluv]
+job_script_path = "scripts/cluv_job.sh"
+results_path = "$SCRATCH/prime-values"
+results_symlink = "cluv-results"
+
+[tool.cluv.local]
+env = { SCRATCH = "$HOME/scratch" }
+
+[tool.cluv.sbatch_args]
+cpus-per-task = 16
+mem = "128G"
+time = "4:00:00"
+requeue = true
+
+[tool.cluv.clusters.mila.sbatch_args]
+account = "mila"
+partition = "main"
+gpus-per-node = 2
+
+[tool.cluv.clusters.tamia.sbatch_args]
+account = "aip-bengioy"
+partition = "gpubase_bynode_b2"
+gpus-per-node = "h100:4"
+
+[tool.cluv.clusters.fir]
+sbatch_args = [
+    { account = "rrg-bengioy-ad_gpu", partition = "gpubase_bygpu_b2", gpus-per-node = "h100:2" },
+    { account = "def-bengioy_gpu", partition = "gpubase_bygpu_b2", gpus-per-node = "h100:2" },
+]
+
 [tool.ruff.lint]
 select = ["F", "I"]
 ignore = ["F722", "F821"] # Need to ignore for jaxtyping (https://docs.kidger.site/jaxtyping/faq/)

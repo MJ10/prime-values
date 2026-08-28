@@ -133,6 +133,33 @@ curl http://localhost:8000/v1/chat/completions \
 - Entrypoint: `src/prime_rl/entrypoints/inference.py`
 - SLURM: single-node, multi-node, and disaggregated deployments
 
+## Cross-cluster launches with cluv
+
+Use the repository's pinned launcher, not a bare `cluv` command. It initializes
+the remote git submodules and runs `uv sync --all-extras`, which upstream
+cluv's default sync does not do:
+
+```bash
+uv run scripts/cluv_prime_rl.py submit mila \
+  --gpus-per-node=2 --time=4:00:00 \
+  -- rl @ examples/reverse_text/rl.toml
+```
+
+For a single-node run, do not include a config with `[slurm]`; cluv already
+owns that Slurm submission. For multi-node runs, synchronize and invoke
+prime-rl's launcher on the remote login node:
+
+```bash
+uv run scripts/cluv_prime_rl.py run mila -- \
+  --no-sync rl @ examples/multinode/rl.toml \
+  --output-dir cluv-results/my-run
+```
+
+See `docs/cluv.md` for cluster overrides, result fetching, and the `first`
+cluster workflow. Before adding a cluster, use `cluv_prime_rl.py sh sacctmgr`
+and `cluv_prime_rl.py sh sinfo` as documented there; do not guess its account,
+partition, or GPU request syntax.
+
 ## Summary
 
 | Command | Purpose | Typical use |

@@ -56,6 +56,7 @@ After a restart, verify all processes are back up and progress resumed before th
 ### Where to find things
 
 - `scripts/tmux.sh` launches the run with a `Launcher` window in the named tmux session. The Claude window receives the output dir and session name in its appended prompt — if either is missing, **ask** rather than guess.
+- Cluv single-node runs default to `$SCRATCH/prime-values/<cluster>_<job-id>/` on the cluster. `uv run scripts/cluv_prime_rl.py sync <cluster>` fetches them to `$HOME/scratch/prime-values/` with the default local config.
 - `{output_dir}/configs/` — resolved TOMLs (`rl.toml` has the full picture).
 - `{output_dir}/logs/` — see below.
 - `{output_dir}/rollouts/step_N/` — saved rollouts.
