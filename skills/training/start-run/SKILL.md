@@ -141,9 +141,13 @@ cluv's default sync does not do:
 
 ```bash
 uv run scripts/cluv_prime_rl.py submit mila \
-  --gpus-per-node=2 --time=4:00:00 \
+  --time=4:00:00 \
   -- rl @ examples/reverse_text/rl.toml
 ```
+
+Keep Mila's configured A100L GPU type unless the replacement is Ampere or
+newer. An untyped GPU request can land on an RTX 8000, which is incompatible
+with FlashAttention.
 
 For a single-node run, do not include a config with `[slurm]`; cluv already
 owns that Slurm submission. For multi-node runs, synchronize and invoke

@@ -358,7 +358,7 @@ requeue = true
 [tool.cluv.clusters.mila.sbatch_args]
 account = "mila"
 partition = "main"
-gpus-per-node = 2
+gpus-per-node = "a100l:2"
 
 [tool.cluv.clusters.tamia.sbatch_args]
 account = "aip-bengioy"

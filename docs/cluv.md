@@ -12,7 +12,7 @@ currently supported GPU allocations as follows:
 
 | Cluster | Account | Partition | GPU request |
 | --- | --- | --- | --- |
-| Mila | `mila` | `main` | 2 GPUs |
+| Mila | `mila` | `main` | 2× A100L |
 | Tamia | `aip-bengioy` | `gpubase_bynode_b2` | one 4× H100 node |
 | Fir | `rrg-bengioy-ad_gpu` or `def-bengioy_gpu` | `gpubase_bygpu_b2` | 2× H100 |
 
@@ -63,7 +63,7 @@ cluster-specific; command-line values override them.
 
 ```bash
 uv run scripts/cluv_prime_rl.py submit mila \
-  --gpus-per-node=8 --cpus-per-task=32 --mem=256G --time=12:00:00 \
+  --gpus-per-node=a100l:8 --cpus-per-task=32 --mem=256G --time=12:00:00 \
   -- rl @ examples/hendrycks_sanity/rl.toml \
   --wandb.project my-project \
   --wandb.name hendrycks-cluv
@@ -79,7 +79,7 @@ SFT uses the same job script:
 
 ```bash
 uv run scripts/cluv_prime_rl.py submit mila \
-  --gpus-per-node=1 --time=2:00:00 \
+  --gpus-per-node=a100l:1 --time=2:00:00 \
   -- sft @ examples/reverse_text/sft.toml
 ```
 
