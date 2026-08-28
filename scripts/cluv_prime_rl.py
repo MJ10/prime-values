@@ -18,6 +18,9 @@ from cluv.remote import Remote
 
 logger = logging.getLogger("cluv")
 cluv_sync = import_module("cluv.cli.sync")
+SYNC_EXCLUDED_PACKAGES = {
+    "fir": ("mooncake-transfer-engine",),
+}
 
 
 async def sync_prime_rl(
@@ -42,7 +45,12 @@ async def sync_prime_rl(
     await remote.run(
         f"git -C {quoted_project_path} submodule update --init --recursive",
     )
-    uv_command = f'uv --cache-dir "$SCRATCH/.cache/prime-values-uv" --directory={quoted_project_path} sync --all-extras'
+    sync_args = ["sync", "--all-extras"]
+    for package in SYNC_EXCLUDED_PACKAGES.get(remote.hostname, ()):
+        sync_args.extend(("--no-install-package", package))
+    uv_command = (
+        f'uv --cache-dir "$SCRATCH/.cache/prime-values-uv" --directory={quoted_project_path} {shlex.join(sync_args)}'
+    )
     await remote.run(f"bash --login -c {shlex.quote(uv_command)}")
     project_state.last_uv_sync_git_commit = current_git_commit
 

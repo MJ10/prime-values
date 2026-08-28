@@ -169,6 +169,10 @@ not the shared home uv cache. If an interrupted cache entry fails installation
 with a missing wheel `METADATA` or `RECORD` file, clean only the named package
 from that cache and retry. Do not remove the whole cache or `.venv`.
 
+Fir sync excludes `mooncake-transfer-engine` because its available wheel needs
+newer glibc than Fir provides. Non-Mooncake training and inference are
+supported; do not launch Mooncake-backed disaggregated inference on Fir.
+
 ## Summary
 
 | Command | Purpose | Typical use |

@@ -55,6 +55,10 @@ runs `uv sync --all-extras` on the cluster. Dependencies use the isolated
 `$SCRATCH/.cache/prime-values-uv` cache instead of the shared home uv cache.
 Cluv requires tracked changes to be committed before submission.
 
+Fir's glibc 2.34 is older than the available `mooncake-transfer-engine` wheel
+requires, so the Fir sync omits that package. Standard training and inference
+runs work there; Mooncake-backed disaggregated inference does not.
+
 ## Submit a single-node experiment
 
 Pass Slurm options before `--` and the prime-rl command after it. The defaults
