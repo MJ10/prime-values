@@ -16,6 +16,12 @@ currently supported GPU allocations as follows:
 | Tamia | `aip-bengioy` | `gpubase_bynode_b2` | one 4× H100 node |
 | Fir | `rrg-bengioy-ad_gpu` or `def-bengioy_gpu` | `gpubase_bygpu_b2` | 2× H100 |
 
+Mila's `main` QOS caps each user at 8 CPUs, 2 GPUs, and 48 GB, so the Mila
+defaults request exactly that. For more, override `--partition`:
+`short-unkillable` allows 4 GPUs with no CPU cap for up to 3 hours at high
+priority, and `long` has no per-user cap but is preemptible. Mila GPU nodes
+hold 4× A100L, 4× L40S, or 8× H100.
+
 On Fir, cluv submits against both allocations and keeps whichever starts first.
 The Tamia and Fir `b2` partitions match the four-hour default and accept jobs up
 to 12 hours. Pair a longer `--time` with the appropriate partition.
@@ -67,12 +73,12 @@ runs work there; Mooncake-backed disaggregated inference does not.
 ## Submit a single-node experiment
 
 Pass Slurm options before `--` and the prime-rl command after it. The defaults
-request 16 CPUs, 128 GB of RAM, and four hours. GPU resources are
-cluster-specific; command-line values override them.
+request 16 CPUs, 128 GB of RAM, and four hours. GPU resources and the Mila CPU
+and memory caps are cluster-specific; command-line values override them.
 
 ```bash
 uv run scripts/cluv_prime_rl.py submit mila \
-  --gpus-per-node=a100l:8 --cpus-per-task=32 --mem=256G --time=12:00:00 \
+  --partition=long --gpus-per-node=a100l:4 --cpus-per-task=32 --mem=256G --time=12:00:00 \
   -- rl @ examples/hendrycks_sanity/rl.toml \
   --wandb.project my-project \
   --wandb.name hendrycks-cluv

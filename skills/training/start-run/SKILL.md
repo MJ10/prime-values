@@ -184,8 +184,22 @@ GIT_SSH_COMMAND="ssh -o HostName=ssh.github.com -o Port=443 -o HostKeyAlias=gith
   uv run scripts/cluv_prime_rl.py submit mila ...
 ```
 
-Value-function examples need one GPU per role. Request `a100l:4` for
-`examples/value_function/rl.toml`; Mila's default `a100l:2` is too small.
+Mila's `main` QOS caps each user at 8 CPUs, 2 GPUs, and 48 GB; `sbatch` rejects
+larger requests with `QOSMaxCpuPerUserLimit`. Check limits with
+`sacctmgr -nP show qos format=Name,MaxTRESPU` rather than guessing. For 3-4 GPU
+runs under 3 hours use `--partition=short-unkillable`; for longer ones use
+`--partition=long`. A100L nodes have 4 GPUs, so a 4-GPU A100L request needs a
+whole node; check `sinfo -p <partition> -o "%G|%D|%t"` and switch to an idle
+H100 or L40S type when that starts sooner.
+
+`examples/value_function/rl.toml` needs one GPU per role (4 total). A short run:
+
+```bash
+uv run scripts/cluv_prime_rl.py submit mila \
+  --partition=short-unkillable --gpus-per-node=h100:4 \
+  --cpus-per-task=16 --mem=128G --time=1:00:00 \
+  -- rl @ examples/value_function/rl.toml
+```
 
 Fir sync excludes `mooncake-transfer-engine` because its available wheel needs
 newer glibc than Fir provides. Non-Mooncake training and inference are
