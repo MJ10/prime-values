@@ -355,6 +355,9 @@ mem = "128G"
 time = "4:00:00"
 requeue = true
 
+[tool.cluv.clusters.mila]
+project_dir = "$SCRATCH/Projects/prime-values"
+
 [tool.cluv.clusters.mila.sbatch_args]
 account = "mila"
 partition = "main"

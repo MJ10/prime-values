@@ -55,6 +55,11 @@ runs `uv sync --all-extras` on the cluster. Dependencies use the isolated
 `$SCRATCH/.cache/prime-values-uv` cache instead of the shared home uv cache.
 Cluv requires tracked changes to be committed before submission.
 
+On Mila, the remote checkout lives at `$SCRATCH/Projects/prime-values` so that
+its `.venv` shares a filesystem with the uv cache and stays out of the 100 GB
+home quota. Other clusters default to the same path under `$HOME`; set
+`project_dir` in a cluster's `[tool.cluv.clusters.<name>]` table to move it.
+
 Fir's glibc 2.34 is older than the available `mooncake-transfer-engine` wheel
 requires, so the Fir sync omits that package. Standard training and inference
 runs work there; Mooncake-backed disaggregated inference does not.

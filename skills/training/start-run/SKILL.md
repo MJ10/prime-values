@@ -169,6 +169,24 @@ not the shared home uv cache. If an interrupted cache entry fails installation
 with a missing wheel `METADATA` or `RECORD` file, clean only the named package
 from that cache and retry. Do not remove the whole cache or `.venv`.
 
+The Mila checkout is `$SCRATCH/Projects/prime-values` (`project_dir` in
+`pyproject.toml`), keeping its 16 GB `.venv` out of the 100 GB home quota. If a
+remote sync fails with `Disk quota exceeded`, check `disk-quota` on the login
+node and the `.venv` location before touching any cache. Note that `~/.cache`
+on Mila may be a symlink to scratch, so `du ~/.cache/*` does not measure home
+usage.
+
+If cluv's local `git push` times out on `github.com` port 22, the local network
+is blocking SSH. Route git over port 443 for that command only:
+
+```bash
+GIT_SSH_COMMAND="ssh -o HostName=ssh.github.com -o Port=443 -o HostKeyAlias=github.com" \
+  uv run scripts/cluv_prime_rl.py submit mila ...
+```
+
+Value-function examples need one GPU per role. Request `a100l:4` for
+`examples/value_function/rl.toml`; Mila's default `a100l:2` is too small.
+
 Fir sync excludes `mooncake-transfer-engine` because its available wheel needs
 newer glibc than Fir provides. Non-Mooncake training and inference are
 supported; do not launch Mooncake-backed disaggregated inference on Fir.
