@@ -21,6 +21,15 @@ cluv_sync = import_module("cluv.cli.sync")
 SYNC_EXCLUDED_PACKAGES = {
     "fir": ("mooncake-transfer-engine",),
 }
+# Run directories this large stay on the cluster when cluv fetches results.
+RESULT_SYNC_EXCLUDES = ("checkpoints/", "broadcasts/", "weights/")
+upstream_run = cluv_sync.run
+
+
+async def run_excluding_large_results(command, *args, **kwargs):
+    if command[0] == "rsync":
+        command = (command[0], *(f"--exclude={pattern}" for pattern in RESULT_SYNC_EXCLUDES), *command[1:])
+    return await upstream_run(command, *args, **kwargs)
 
 
 async def sync_prime_rl(
@@ -56,6 +65,7 @@ async def sync_prime_rl(
 
 
 cluv_sync.run_uv_sync = sync_prime_rl
+cluv_sync.run = run_excluding_large_results
 
 from cluv.__main__ import main  # noqa: E402
 
