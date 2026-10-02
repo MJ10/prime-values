@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import atexit
+import contextlib
 import multiprocessing as mp
 import os
 import queue
@@ -27,6 +28,7 @@ from multiprocessing.process import BaseProcess
 from pathlib import Path
 from typing import TYPE_CHECKING, Generic, TypeVar
 
+import psutil
 import verifiers.v1 as vf
 from verifiers.v1.serve import EnvClient
 
@@ -78,6 +80,13 @@ def _run_env_server(
         log_setup=partial(setup_env_server_logging, log_level, json_logging),
         **kwargs,
     )
+
+
+def _descendants(pid: int) -> list[psutil.Process]:
+    try:
+        return psutil.Process(pid).children(recursive=True)
+    except psutil.NoSuchProcess:
+        return []
 
 
 class Env:
@@ -260,12 +269,16 @@ class Envs(Generic[EnvT]):
         atexit.register(self.shutdown)
 
     def shutdown(self) -> None:
-        """Terminate all spawned env server processes."""
+        """Terminate all spawned env server processes and any workers they leave behind."""
         processes = [env._env_server_process for env in self if env._env_server_process is not None]
         if not processes:
             return
         logger = get_logger()
         logger.debug(f"Shutting down {len(processes)} env server(s)")
+        # Snapshot descendants before terminating: a force-killed server orphans its pool
+        # workers, which inherit the multiprocessing resource-tracker pipe and would keep
+        # this process from exiting.
+        descendants = [child for p in processes for child in _descendants(p.pid)]
         for p in processes:
             p.terminate()
         for p in processes:
@@ -274,6 +287,12 @@ class Envs(Generic[EnvT]):
                 logger.warning(f"Env server {p.pid} did not exit after 25s, force killing")
                 p.kill()
                 p.join(timeout=5)
+        leftover = [child for child in descendants if child.is_running()]
+        if leftover:
+            logger.warning(f"Killing {len(leftover)} env server worker process(es) left behind")
+        for child in leftover:
+            with contextlib.suppress(psutil.NoSuchProcess):
+                child.kill()
         for env in self:
             env._env_server_process = None
 
