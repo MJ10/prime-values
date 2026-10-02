@@ -45,8 +45,12 @@ args = { dataset_name = "PrimeIntellect/Hendrycks-Math", dataset_subset = "defau
 [orchestrator.eval]
 interval = 25
 
+# Eval goes through chat completions, where Qwen3's template defaults to
+# thinking; match the training renderer and temperature instead.
 [orchestrator.eval.sampling]
+temperature = 1.0
 max_completion_tokens = 1536
+extra_body = { chat_template_kwargs = { enable_thinking = false } }
 
 [[orchestrator.eval.env]]
 id = "math-env"
