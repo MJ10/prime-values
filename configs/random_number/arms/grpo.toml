@@ -1,0 +1,4 @@
+# Reward maximization with a group-mean baseline: reward 1 for a valid number.
+
+[orchestrator.algo]
+type = "grpo"

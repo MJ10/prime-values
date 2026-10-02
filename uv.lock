@@ -4001,6 +4001,7 @@ envs = [
     { name = "patterned-needle-in-haystack-v1" },
     { name = "prolog-v1" },
     { name = "r2e-gym-v1" },
+    { name = "random-number" },
     { name = "redsearcher-v1" },
     { name = "reverse-text" },
     { name = "reverse-text-v1" },
@@ -4137,6 +4138,7 @@ requires-dist = [
     { name = "pyzmq", specifier = ">=27.1.0" },
     { name = "quack-kernels", marker = "extra == 'quack'", specifier = ">=0.4.1" },
     { name = "r2e-gym-v1", marker = "extra == 'envs'", editable = "deps/research-environments/environments/swe/r2e_gym_v1" },
+    { name = "random-number", marker = "extra == 'envs'", editable = "environments/random_number" },
     { name = "redsearcher-v1", marker = "extra == 'envs'", editable = "deps/research-environments/environments/redsearcher_v1" },
     { name = "renderers", editable = "deps/renderers" },
     { name = "reverse-text", marker = "extra == 'envs'", editable = "deps/verifiers/environments/reverse_text" },
@@ -4714,6 +4716,21 @@ dependencies = [
 requires-dist = [
     { name = "datasets" },
     { name = "verifiers", specifier = ">=0.1.15.dev434" },
+]
+
+[[package]]
+name = "random-number"
+version = "0.1.0"
+source = { editable = "environments/random_number" }
+dependencies = [
+    { name = "datasets" },
+    { name = "verifiers" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "datasets" },
+    { name = "verifiers", specifier = ">=0.1.9" },
 ]
 
 [[package]]

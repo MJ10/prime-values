@@ -1,9 +1,11 @@
 import asyncio
+import math
 
 import pytest
 import verifiers.v1 as vf
 
 from prime_rl.configs.algorithm import (
+    GFNAlgoConfig,
     GRPOAlgoConfig,
     LinearLengthPenaltyConfig,
     MaxRLAlgoConfig,
@@ -13,6 +15,7 @@ from prime_rl.orchestrator.algo.advantage import (
     group_advantages,
     group_baselines,
 )
+from prime_rl.orchestrator.algo.gfn import GFNAlgorithm
 from prime_rl.orchestrator.algo.grpo import GRPOAlgorithm
 from prime_rl.orchestrator.algo.max_rl import MaxRLAlgorithm
 from prime_rl.orchestrator.trajectories import trace_to_samples
@@ -222,6 +225,19 @@ def test_max_rl_mean_normalized():
     assert _max_rl(_make_group(rewards=[0.0, 0.0])) == pytest.approx([0.0, 0.0])
     # ... and all-success groups center to zero like GRPO
     assert _max_rl(_make_group(rewards=[1.0, 1.0])) == pytest.approx([0.0, 0.0])
+
+
+def test_gfn_centers_log_reward_minus_sequence_logprob():
+    group = _make_group(rewards=[1.0, 0.0, 1.0], completion_lengths=[2, 1, 1])
+    for rollout, token_logprob in zip(group, [-0.5, -2.0, -3.0]):
+        for sample in rollout.samples:
+            sample.logprobs = [token_logprob if trainable else 0.0 for trainable in sample.mask]
+    asyncio.run(GFNAlgorithm(GFNAlgoConfig(min_reward=1e-2), policy_pool=None).score_group(group))
+
+    # log R - log pi: 0 - (-1), log(1e-2) - (-2), 0 - (-3)
+    log_ratios = [1.0, math.log(1e-2) + 2.0, 3.0]
+    mean = sum(log_ratios) / 3
+    assert [_scalar(rollout) for rollout in group] == pytest.approx([r - mean for r in log_ratios])
 
 
 # --------------------------------------------------------------------------

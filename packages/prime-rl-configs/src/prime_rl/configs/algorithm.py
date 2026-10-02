@@ -1,7 +1,7 @@
 """Algorithm abstraction: sampling and the per-token training signal.
 
 An algorithm is a named, self-contained config — a discriminated union keyed
-on ``type`` (``grpo``, ``max_rl``, ``opd``, ``opsd``, ``sft``, ``echo``).
+on ``type`` (``grpo``, ``max_rl``, ``gfn``, ``opd``, ``opsd``, ``sft``, ``echo``).
 The bundle *is* the algorithm: each variant carries
 its sampling component and its credit-assignment / loss-routing parameters,
 and its class defaults are the vetted setting — ``type = "opd"`` with a
@@ -393,6 +393,26 @@ class MaxRLAlgoConfig(BaseAlgoConfig):
     action_loss_type: ClassVar[ActionLossType] = "rl"
 
 
+class GFNAlgoConfig(BaseAlgoConfig):
+    type: Literal["gfn"] = "gfn"
+    """GFlowNet fine-tuning (arXiv:2310.04363): train the policy to sample
+    completions with probability proportional to their reward instead of
+    maximizing it. The scalar advantage is ``log R(x) − log π(x)`` centered by
+    its group mean, where ``log π(x)`` sums the sampling logprobs of the
+    rollout's trainable tokens. This is on-policy trajectory balance with
+    ``log Z`` estimated by the group mean (equivalently, the reverse-KL
+    gradient toward ``R / Z``), consumed by the ``rl`` loss component.
+
+    Rewards must be non-negative and sampled at temperature 1, so the logprobs
+    are the policy's own. Zero rewards are floored at ``min_reward``."""
+
+    action_loss_type: ClassVar[ActionLossType] = "rl"
+
+    min_reward: float = Field(1e-4, gt=0, allow_inf_nan=False)
+    """Reward floor before the log: the target probability of a zero-reward
+    completion relative to a reward-1 one."""
+
+
 class OPDAlgoConfig(BaseAlgoConfig):
     type: Literal["opd"] = "opd"
     """On-policy distillation: the per-token signal is the reverse KL to
@@ -466,7 +486,13 @@ class SFTAlgoConfig(BaseAlgoConfig):
 
 
 AlgoConfig: TypeAlias = Annotated[
-    GRPOAlgoConfig | EchoAlgoConfig | MaxRLAlgoConfig | OPDAlgoConfig | OPSDAlgoConfig | SFTAlgoConfig,
+    GRPOAlgoConfig
+    | EchoAlgoConfig
+    | MaxRLAlgoConfig
+    | GFNAlgoConfig
+    | OPDAlgoConfig
+    | OPSDAlgoConfig
+    | SFTAlgoConfig,
     Field(discriminator="type"),
 ]
 """The training algorithm: sampling plus the per-token training signal (credit
@@ -475,6 +501,7 @@ its class defaults are the vetted setting.
 
 - ``grpo`` — policy group sampling, group-relative advantage, RL loss (the default).
 - ``max_rl`` — GRPO with mean-normalized advantages (maximum-likelihood RL).
+- ``gfn`` — GFlowNet fine-tuning: policy samples, group-centered ``log R − log π`` advantage, RL loss (samples ``∝ R``).
 - ``opd`` — on-policy distillation: policy samples, per-token reverse KL against a reference model. Needs ``teacher``.
 - ``opsd`` — SDFT: policy samples, demo-conditioned reverse KL against the live policy (the teacher is the policy itself).
 - ``sft`` — a frozen model samples, the policy trains with CE on its tokens. Needs a frozen ``sampling.source``.

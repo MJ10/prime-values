@@ -1,0 +1,21 @@
+# Reward maximization with a learned critic (PPO-style, the paper's baseline):
+# one rollout per prompt, A_t = R - V_t.
+
+[orchestrator]
+group_size = 1
+
+[orchestrator.algo]
+type = "grpo"
+
+[orchestrator.algo.baseline]
+type = "value"
+
+[value_function]
+
+[value_function.ckpt]
+interval = 50
+resume_step = -1
+
+[deployment]
+gpus_per_node = 4
+num_value_train_gpus = 1

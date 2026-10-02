@@ -1,0 +1,48 @@
+# Shared setup for the random-number study (arXiv:2310.04363, Section 2).
+# Compose with exactly one arm overlay:
+#   uv run rl @ configs/random_number/base.toml @ configs/random_number/arms/<arm>.toml
+
+max_steps = 300
+seq_len = 128
+
+[model]
+name = "Qwen/Qwen3-1.7B-Base"
+
+[wandb]
+project = "random-number"
+
+# Resume from the latest checkpoint after a Slurm requeue.
+[ckpt]
+interval = 50
+resume_step = -1
+keep_last = 1
+
+[orchestrator]
+batch_size = 256 # rollouts per step, identical across arms
+group_size = 16
+
+# Feed the paper's prompt verbatim as a raw completion: no chat markup.
+[orchestrator.renderer]
+name = "default"
+chat_template = "{% for message in messages %}{{ message['content'] }}{% endfor %}"
+
+# Temperature 1 so the sampled distribution is the policy's own. A rollout ends
+# at a newline or EOS; hitting the token limit counts as invalid.
+[orchestrator.train.sampling]
+temperature = 1.0
+max_completion_tokens = 8
+extra_body = { stop = ["\n"] }
+
+[[orchestrator.train.env]]
+id = "random-number"
+
+[trainer.optim]
+lr = 2e-6
+
+[inference]
+
+[deployment]
+type = "single_node"
+gpus_per_node = 2
+num_infer_gpus = 1
+num_train_gpus = 1

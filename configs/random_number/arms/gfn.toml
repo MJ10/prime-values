@@ -1,0 +1,7 @@
+# Distribution matching (GFlowNet fine-tuning): sample numbers in proportion
+# to reward, i.e. uniformly over valid numbers. Invalid outputs get target
+# weight min_reward relative to a valid number.
+
+[orchestrator.algo]
+type = "gfn"
+min_reward = 1e-4
