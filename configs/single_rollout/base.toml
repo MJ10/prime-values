@@ -34,10 +34,13 @@ enable_thinking = false
 [orchestrator.train.sampling]
 max_completion_tokens = 1536
 
+# The v0 math-env scores in-process with a persistent math-verify worker pool;
+# v1 math tasksets spawn a uv script per score, which stalls at 256 in-flight
+# rollouts.
 [[orchestrator.train.env]]
+id = "math-env"
 name = "hendrycks-math"
-taskset = { id = "math-env-v1" }
-harness = { id = "null", runtime = { type = "subprocess" } }
+args = { dataset_name = "PrimeIntellect/Hendrycks-Math", dataset_subset = "default" }
 
 [orchestrator.eval]
 interval = 25
@@ -46,9 +49,9 @@ interval = 25
 max_completion_tokens = 1536
 
 [[orchestrator.eval.env]]
+id = "math-env"
 name = "math500"
-taskset = { id = "math500-v1" }
-harness = { id = "null", runtime = { type = "subprocess" } }
+args = { dataset_name = "HuggingFaceH4/MATH-500", dataset_subset = "default", dataset_split = "test", question_key = "problem" }
 group_size = 4
 
 [trainer]

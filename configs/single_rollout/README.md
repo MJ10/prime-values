@@ -8,7 +8,7 @@ GRPO's group-mean baseline at the same rollout budget?
 `base.toml` holds everything shared by the arms:
 
 - `Qwen/Qwen3-0.6B` in non-thinking mode, at most 1536 completion tokens
-- training on Hendrycks MATH (`math-env-v1`), binary math-verify reward
+- training on Hendrycks MATH (v0 `math-env`), binary math-verify reward
 - MATH-500 avg@4 at startup and every 25 steps
 - 256 rollouts per step for 200 steps
 - one GPU each for policy inference, the policy trainer, the value trainer,
