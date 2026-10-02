@@ -9,7 +9,8 @@ GRPO's group-mean baseline at the same rollout budget?
 
 - `Qwen/Qwen3-0.6B` in non-thinking mode, at most 1536 completion tokens
 - training on Hendrycks MATH (v0 `math-env`), binary math-verify reward
-- MATH-500 avg@4 at startup and every 25 steps
+- MATH-500 avg@4 at startup and every 25 steps, sampled like training
+  (temperature 1.0, thinking disabled)
 - 256 rollouts per step for 200 steps
 - one GPU each for policy inference, the policy trainer, the value trainer,
   and the value evaluator
@@ -35,21 +36,32 @@ saturates. Single-rollout arms always train on all 256 samples.
 
 ## Launch
 
-Compose the base with one arm. On Mila, use the same GPU type for every arm
-so step times are comparable:
+Compose the base with one arm. Run every arm on the same cluster and GPU type
+so step times are comparable. A 10-step smoke run on 4x H100 took about 20 s
+per step plus about 2.5 min per eval, so a full arm takes roughly 1.5 hours.
+On Tamia, the three-hour `gpubase_bynode_b1` partition fits one arm:
+
+`cluv submit` waits until its job starts, so submit the arms in the
+background. The stagger lets each submit finish its remote sync before the next
+one runs `git pull` in the same checkout:
 
 ```bash
-arm=s1_value
-uv run scripts/cluv_prime_rl.py submit mila \
-  --partition=long --gpus-per-node=h100:4 \
-  --cpus-per-task=16 --mem=128G --time=6:00:00 \
-  -- rl @ configs/single_rollout/base.toml @ configs/single_rollout/arms/$arm.toml \
-  --wandb.name $arm
+for arm in g8_mean g4_mean g2_mean s1_value s1_value_replay4 s1_value_lam95; do
+  uv run scripts/cluv_prime_rl.py submit tamia \
+    --partition=gpubase_bynode_b1 --time=3:00:00 \
+    -- rl @ configs/single_rollout/base.toml @ configs/single_rollout/arms/$arm.toml \
+    --wandb.name $arm > cluv-submit-$arm.log 2>&1 &
+  sleep 60
+done
+wait
 ```
 
-`long` is preemptible. The base config checkpoints the policy and critic every
-25 steps and resumes from the latest checkpoint when Slurm requeues the job.
-The critic replay buffer refills from fresh rollouts after a resume.
+Jobs read the remote checkout when they start, so do not sync a new commit to
+the cluster while arms are still queued.
+
+The base config checkpoints the policy and critic every 25 steps and resumes
+from the latest checkpoint when Slurm requeues the job. The critic replay
+buffer refills from fresh rollouts after a resume.
 
 ## What to compare
 

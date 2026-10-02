@@ -216,6 +216,13 @@ uv run scripts/cluv_prime_rl.py submit mila \
   -- rl @ examples/value_function/rl.toml
 ```
 
+Single-node cluv jobs run from the shared remote checkout, not a per-job copy,
+so a queued job starts on whatever commit is checked out when it begins. Do not
+`sync` or `submit` a new commit while experiment jobs are still pending.
+`cluv submit` blocks until its job starts; to queue several jobs, run the
+submits in the background a minute apart so their remote `git pull` calls do
+not overlap.
+
 Every cluv `submit` and `sync` first rsyncs all remote run directories to the
 local `$SCRATCH/prime-values`. The launcher excludes `checkpoints/`,
 `broadcasts/`, and `weights/` from that fetch; inspect them on the cluster.
