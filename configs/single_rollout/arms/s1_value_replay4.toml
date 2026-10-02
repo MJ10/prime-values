@@ -1,0 +1,12 @@
+# s1_value with each rollout reused for up to four critic updates. Critic
+# training starts after one batch, matching the other value arms' warmup.
+
+[orchestrator]
+group_size = 1
+
+[orchestrator.algo.baseline]
+type = "value"
+
+[value_function.replay]
+max_updates_per_rollout = 4
+refill_size = 256

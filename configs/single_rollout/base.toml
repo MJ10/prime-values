@@ -1,0 +1,68 @@
+# Shared setup for the single-rollout vs group-rollout study on MATH.
+# Compose with exactly one arm overlay:
+#   uv run rl @ configs/single_rollout/base.toml @ configs/single_rollout/arms/<arm>.toml
+#
+# Every arm generates the same number of rollouts per step and runs the same
+# four-GPU topology. Group arms train the critic for diagnostics only.
+
+max_steps = 200
+seq_len = 2048
+
+[model]
+name = "Qwen/Qwen3-0.6B"
+
+[wandb]
+project = "single-rollout-math"
+
+# Resume from the latest checkpoint after a Slurm requeue; a fresh run starts
+# from scratch because no checkpoint exists yet.
+[ckpt]
+interval = 25
+resume_step = -1
+
+[orchestrator]
+batch_size = 256 # rollouts per step, identical across arms
+
+[orchestrator.algo]
+type = "grpo"
+
+[orchestrator.renderer]
+name = "qwen3"
+enable_thinking = false
+
+[orchestrator.train.sampling]
+max_completion_tokens = 1536
+
+[[orchestrator.train.env]]
+name = "hendrycks-math"
+taskset = { id = "math-env-v1" }
+harness = { id = "null", runtime = { type = "subprocess" } }
+
+[orchestrator.eval]
+interval = 25
+
+[orchestrator.eval.sampling]
+max_completion_tokens = 1536
+
+[[orchestrator.eval.env]]
+name = "math500"
+taskset = { id = "math500-v1" }
+harness = { id = "null", runtime = { type = "subprocess" } }
+group_size = 4
+
+[trainer]
+
+[inference]
+
+[value_function]
+
+[value_function.ckpt]
+interval = 25
+resume_step = -1
+
+[deployment]
+type = "single_node"
+gpus_per_node = 4
+num_infer_gpus = 1
+num_train_gpus = 1
+num_value_train_gpus = 1

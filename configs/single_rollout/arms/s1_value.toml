@@ -1,0 +1,7 @@
+# One rollout per prompt; the critic is the only baseline (A_t = R - V_t).
+
+[orchestrator]
+group_size = 1
+
+[orchestrator.algo.baseline]
+type = "value"

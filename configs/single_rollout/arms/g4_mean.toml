@@ -1,0 +1,7 @@
+# GRPO reference: 4 rollouts per prompt, group-mean baseline.
+
+[orchestrator]
+group_size = 4
+
+[orchestrator.algo.baseline]
+type = "mean"

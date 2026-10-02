@@ -1,0 +1,10 @@
+# s1_value with bootstrapped policy GAE; the critic target stays Monte Carlo.
+
+[orchestrator]
+group_size = 1
+
+[orchestrator.algo.baseline]
+type = "value"
+
+[value_function]
+gae_lambda = 0.95
