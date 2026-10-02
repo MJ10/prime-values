@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import socket
 import threading
 import time
 from collections import deque
@@ -297,6 +298,9 @@ class ValueRequestService:
 
 class ValueHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
+    # Every evaluation opens a new HTTP/1.0 connection. The stdlib backlog of 5
+    # overflows under concurrent requests and resets client connections.
+    request_queue_size = socket.SOMAXCONN
 
     def __init__(self, address: tuple[str, int], service: ValueRequestService):
         self.service = service
