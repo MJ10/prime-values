@@ -61,10 +61,17 @@ runs `uv sync --all-extras` on the cluster. Dependencies use the isolated
 `$SCRATCH/.cache/prime-values-uv` cache instead of the shared home uv cache.
 Cluv requires tracked changes to be committed before submission.
 
-On Mila, the remote checkout lives at `$SCRATCH/Projects/prime-values` so that
-its `.venv` shares a filesystem with the uv cache and stays out of the 100 GB
+On Mila and Tamia, the remote checkout lives at `$SCRATCH/Projects/prime-values`
+so that its `.venv` shares a filesystem with the uv cache and stays out of the
 home quota. Other clusters default to the same path under `$HOME`; set
 `project_dir` in a cluster's `[tool.cluv.clusters.<name>]` table to move it.
+
+Tamia compute nodes reach the internet only through the cluster's Squid proxy.
+Its `env` table exports `http_proxy`, `https_proxy`, and a `no_proxy` that keeps
+localhost traffic between prime-rl components off the proxy; Hugging Face, PyPI,
+W&B, and GitHub are reachable through it. A checkout with its `.venv` and uv
+cache takes roughly 180K inodes, so check the scratch file quota with
+`diskusage_report` before the first sync.
 
 Fir's glibc 2.34 is older than the available `mooncake-transfer-engine` wheel
 requires, so the Fir sync omits that package. Standard training and inference

@@ -176,6 +176,21 @@ node and the `.venv` location before touching any cache. Note that `~/.cache`
 on Mila may be a symlink to scratch, so `du ~/.cache/*` does not measure home
 usage.
 
+Tamia compute nodes have no direct internet access; the cluster's cluv `env`
+exports its Squid proxy and a localhost `no_proxy`. If a Tamia job cannot reach
+Hugging Face, PyPI, or W&B, check that those variables reached the job before
+pre-downloading anything. The Tamia checkout is also on scratch, whose file
+quota (`diskusage_report`) is the binding limit: an install needs ~180K inodes.
+
+Harness programs and reward scripts such as `verify.py` run as uv scripts whose
+environments live in the shared `~/.cache/uv/environments-v2/`. The first
+rollouts that use a new script environment can fail with `FileNotFoundError`
+inside it while concurrent rollouts build it on a network filesystem. The
+failures stop once it is built, and later jobs reuse it. With a cold uv cache,
+run one job before launching a parallel sweep so concurrent jobs do not race
+on the same environment. Failures that persist mean a broken entry, which can
+be removed on its own.
+
 If cluv's local `git push` times out on `github.com` port 22, the local network
 is blocking SSH. Route git over port 443 for that command only:
 
