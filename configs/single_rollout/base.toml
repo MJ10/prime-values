@@ -19,6 +19,7 @@ project = "single-rollout-math"
 [ckpt]
 interval = 25
 resume_step = -1
+keep_last = 2
 
 [orchestrator]
 batch_size = 256 # rollouts per step, identical across arms

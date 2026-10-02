@@ -201,6 +201,10 @@ uv run scripts/cluv_prime_rl.py submit mila \
   -- rl @ examples/value_function/rl.toml
 ```
 
+Every cluv `submit` and `sync` first rsyncs all remote run directories to the
+local `$SCRATCH/prime-values`. The launcher excludes `checkpoints/`,
+`broadcasts/`, and `weights/` from that fetch; inspect them on the cluster.
+
 Fir sync excludes `mooncake-transfer-engine` because its available wheel needs
 newer glibc than Fir provides. Non-Mooncake training and inference are
 supported; do not launch Mooncake-backed disaggregated inference on Fir.

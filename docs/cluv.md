@@ -134,5 +134,8 @@ uv run scripts/cluv_prime_rl.py sync mila
 The second command fetches remote results. With the default local
 `SCRATCH=$HOME/scratch`, they are stored under
 `$HOME/scratch/prime-values/<cluster>_<job-id>/`. Each directory contains the
-resolved configs, component logs, checkpoints, rollouts, and Slurm output for
-that run.
+resolved configs, component logs, rollouts, and Slurm output for that run.
+Every `submit` and `sync` performs this fetch. The launcher excludes
+`checkpoints/`, `broadcasts/`, and `weights/` directories, which can reach tens
+of gigabytes per run; read them on the cluster under the configured
+`results_path`.
