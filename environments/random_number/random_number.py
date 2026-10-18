@@ -6,12 +6,16 @@ import verifiers as vf
 
 PROMPT = "The following is a random integer drawn uniformly between {low} and {high}: "
 LEADING_DIGITS = re.compile(r"[0-9]+")
+# The text of the one token that may follow the digits. EOS decodes to "" (the
+# renderer strips special tokens); "\n" and "." must also be the sampling stop
+# strings, so generation ends right after any digit.
+TERMINATORS = ("", "\n", ".")
 
 
 def parse_number(text: str, num_tokens: int, low: int, high: int) -> int | None:
     """The integer a completion names, or None unless it is a canonical integer
-    in ``[low, high]`` followed by exactly one terminating token: EOS (which the
-    renderer strips from ``text``) or a whitespace/punctuation token.
+    in ``[low, high]`` followed by exactly one terminator token: EOS, ``"\\n"``
+    or ``"."`` (merged tokens such as ``".\\n"`` do not count).
 
     Assumes one token per digit (true of Qwen tokenizers), so every number has
     the same set of valid completions."""
@@ -21,7 +25,7 @@ def parse_number(text: str, num_tokens: int, low: int, high: int) -> int | None:
     digits = match.group()
     if num_tokens != len(digits) + 1 or digits != str(int(digits)):
         return None
-    if any(char.isalnum() for char in text[match.end() :]):
+    if text[match.end() :] not in TERMINATORS:
         return None
     number = int(digits)
     return number if low <= number <= high else None
@@ -31,10 +35,10 @@ def load_environment(low: int = 0, high: int = 100, num_examples: int = 1024) ->
     """Random integer generation (Hu et al., 2023, arXiv:2310.04363, Section 2).
 
     Every example is the same completion-style prompt. Sample with stop strings
-    covering separators (newline, space, punctuation) so a rollout can end
-    right after any digit, like the paper's terminate-at-every-state GFlowNet.
-    Valid rollouts (see ``parse_number``) get reward 1 and invalid ones 0; the
-    ``number`` metric records the parsed integer (-1 when invalid)."""
+    ``["\\n", "."]`` so a rollout can end right after any digit, like the paper's
+    terminate-at-every-state GFlowNet. Valid rollouts (see ``parse_number``) get
+    reward 1 and invalid ones 0; the ``number`` metric records the parsed
+    integer (-1 when invalid)."""
     prompt = PROMPT.format(low=low, high=high)
 
     def completion_number(completion, state) -> int | None:

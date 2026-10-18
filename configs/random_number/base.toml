@@ -28,13 +28,15 @@ group_size = 16
 name = "default"
 chat_template = "{% for message in messages %}{{ message['content'] }}{% endfor %}"
 
-# Temperature 1 so the sampled distribution is the policy's own. Generation
-# stops at the first token containing a separator, so a rollout can end right
-# after any digit; it is valid only if it is exactly digits + that one token.
+# Temperature 1 so the sampled distribution is the policy's own. The stop
+# strings are the env's terminators (with EOS), so generation ends at the first
+# token containing one; a rollout is valid only if it is the digits plus exactly
+# a "\n", "." or EOS token. A valid rollout has at most 4 tokens ("100."); the
+# cap of 5 keeps it clear of truncation.
 [orchestrator.train.sampling]
 temperature = 1.0
-max_completion_tokens = 6
-extra_body = { stop = ["\n", " ", ".", ",", ";", ":", "!", "?", "-", ")", "/", "%"] }
+max_completion_tokens = 5
+extra_body = { stop = ["\n", "."] }
 
 [[orchestrator.train.env]]
 id = "random-number"

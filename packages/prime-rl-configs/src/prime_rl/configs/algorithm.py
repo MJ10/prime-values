@@ -410,7 +410,9 @@ class GFNAlgoConfig(BaseAlgoConfig):
 
     min_reward: float = Field(1e-4, gt=0, allow_inf_nan=False)
     """Reward floor before the log: the target probability of a zero-reward
-    completion relative to a reward-1 one."""
+    completion relative to a reward-1 one. With binary rewards, keep it far below
+    ``1 / V^max_completion_tokens`` (``V`` the vocab size), or the many
+    zero-reward completions dominate the target."""
 
 
 class OPDAlgoConfig(BaseAlgoConfig):

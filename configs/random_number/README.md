@@ -22,8 +22,8 @@ of about 1e-4.
 - `Qwen/Qwen2.5-1.5B-Instruct` with full fine-tuning (the paper used an
   instruction-tuned GPT-J 6B with LoRA). Qwen tokenizes digits one at a time,
   so every number has exactly one token sequence. Modern Qwen models are much
-  closer to uniform on this prompt than GPT-J (KL 3.37). Over 4,000 samples
-  with the env's validity rule:
+  closer to uniform on this prompt than GPT-J (KL 3.37). Over 4,000 samples,
+  counting any whitespace/punctuation token as a terminator:
 
   | Model | Valid | KL to uniform | Most frequent |
   | --- | ---: | ---: | --- |
@@ -35,19 +35,22 @@ of about 1e-4.
 
   Instruction tuning adds skew, as the paper suggests. The study uses the most
   skewed model. Sampling noise alone gives a KL of about 0.013 at this sample
-  size.
+  size. Under the env's stricter terminator rule (below), Qwen2.5-1.5B-Instruct
+  is 74.8% valid with a KL of 0.64: it ends 73% of its numbers with `"."`, and
+  most of the rest with merged tokens such as `".\n\n"` or with `","`.
 - The `random-number` env (`environments/random_number`). Generation stops at
-  the first token containing a separator (newline, space, punctuation) or at
-  EOS, so a rollout can end right after any digit. This matches the paper's
-  GFlowNet, which can terminate at every state. A rollout is valid when it is
-  exactly the digit tokens of a canonical integer in `[0, 100]` (no leading
-  zeros) plus that one terminating token, and the terminator is EOS or contains
-  only whitespace and punctuation (`"."`, `","`, `"\n"`, but not `" The"`).
-  Every number therefore has the same set of valid completions. Valid rollouts get reward 1 and invalid ones get 0.
-  The `number` metric records the parsed value, or -1 when the rollout is
-  invalid.
-- Sampling at temperature 1, with at most 6 completion tokens. 256 rollouts per
-  step for 300 steps, with lr 2e-6.
+  EOS or at the first token containing `"\n"` or `"."`, so a rollout can end
+  right after any digit. This matches the paper's GFlowNet, which can terminate
+  at every state. A rollout is valid when it is exactly the digit tokens of a
+  canonical integer in `[0, 100]` (no leading zeros) plus one terminator token:
+  EOS, `"\n"` or `"."`. Merged tokens such as `".\n"` and other punctuation
+  such as `","` are invalid. Every number therefore has the same small set of
+  valid completions, so a distribution that is uniform over valid completions
+  is also uniform over numbers. Valid rollouts get reward 1 and invalid ones
+  get 0. The `number` metric records the parsed value, or -1 when the rollout
+  is invalid.
+- Sampling at temperature 1, with at most 5 completion tokens (a valid rollout
+  has at most 4). 256 rollouts per step for 300 steps, with lr 2e-6.
 - One GPU for inference and one for the trainer. The value arm adds a value
   trainer and a value evaluator, for four GPUs in total.
 
@@ -62,9 +65,23 @@ of about 1e-4.
 
 `gfn` is on-policy trajectory balance, with the group mean of `log R - log π`
 standing in for `log Z`. Its expected gradient is the reverse-KL gradient
-toward `π ∝ R`, so it stops only once valid numbers are uniform. Invalid
-rollouts are floored at `min_reward = 1e-10`; at `1e-4`, the many invalid
-sequences carry enough target mass that validity fell during training.
+toward `π ∝ R`, so it stops only once valid numbers are uniform.
+
+Invalid rollouts have reward 0, which `gfn` floors at `min_reward = 1e-40`.
+The floor is each invalid completion's target weight relative to a valid one,
+and there are about `V^5 ≈ 8e25` invalid completions of up to 5 tokens
+(vocab `V ≈ 152k`). A floor above `1/V^5 ≈ 1e-26` therefore makes the target
+mostly gibberish, and the policy drifts toward it as its entropy grows. A
+floor of `1e-10` with 6-token completions held for about 220 steps and then
+collapsed to 0% valid. At `1e-40`, invalid completions hold about `1e-17` of
+the target mass. The cost is a large negative advantage (about −90) on each
+invalid rollout, which drives validity toward 100%, as in the paper.
+
+`grpo` and `value` see the same binary validity reward under the stricter
+rule. With the base model at 75% valid instead of 96%, they have more to learn
+before validity saturates. After that every advantage is zero and the
+orchestrator stops them after 10 empty batches, which is the paper's
+zero-gradient argument.
 
 ## Launch
 
