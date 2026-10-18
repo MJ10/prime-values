@@ -1,12 +1,14 @@
 # Reward maximization with a group-mean baseline: reward 1 for a valid number.
 
+[orchestrator]
+# Once validity saturates every advantage is zero. Ship those rollouts instead
+# of filtering them, so the run trains on zero advantages to max_steps (the
+# paper's zero-gradient argument) and saves final weights, rather than stopping
+# after 10 empty batches.
+post_batch_filters = [{ type = "gibberish" }, { type = "repetition" }, { type = "zero_advantage", enforce = false }]
+
 [orchestrator.algo]
 type = "grpo"
-
-# Once validity saturates every advantage is zero and the orchestrator stops
-# the run, so checkpoint often enough that the last weights are the final policy.
-[ckpt]
-interval = 10
 
 # Keeps the overlay loadable on its own (tests/unit/test_configs.py).
 [trainer]

@@ -39,8 +39,9 @@ of about 1e-4.
 - The `random-number` env (`environments/random_number`), with one stop action
   like the paper's EOS. The terminator is `"."`, not EOS:
   Qwen2.5-1.5B-Instruct ended 1 of 10,302 base samples with EOS after a
-  number, while it ends 73% of its numbers with a lone `"."` token. That puts
-  the base model at about 73% valid, near GPT-J's 50.5% in the paper.
+  number, while it ends 73% of its numbers with a lone `"."` token. Over 512k
+  samples the base model is 70.4% valid with a KL of 0.53, against GPT-J's
+  50.5% and 3.37 in the paper.
   Generation stops at the first token containing `"."`, so a rollout can end
   right after any digit, like the paper's GFlowNet, which can terminate at
   every state. A rollout is valid when it is exactly the digit tokens of a
@@ -85,10 +86,12 @@ of 0.03–0.05 to uniform for about 220 steps, then drifted into gibberish and
 reached 0% valid. `gfn`'s `min_reward = 1e-60` sits below the smallest env
 reward (`e^-128`), so it only catches rollouts that failed with reward 0.
 
-`grpo` and `value` start from about 73% validity. Once validity saturates, every advantage is zero, and the
-orchestrator stops the run after 10 consecutive empty batches. This is the
-paper's zero-gradient argument. Both arms therefore checkpoint every 10 steps,
-so the last weights are the final policy.
+`grpo` and `value` start from about 70% validity. Once validity saturates,
+every advantage is zero: this is the paper's zero-gradient argument. By default
+the orchestrator filters zero-advantage rollouts and stops a run after 10
+consecutive empty batches, which would leave it without final weights. Both
+arms therefore ship zero-advantage rollouts and train to `max_steps` like
+`gfn`.
 
 ## Launch
 
@@ -99,8 +102,7 @@ the start-run skill). Steps average about 27 s, so a 300-step arm takes about
 
 Mila's `main` QOS allows 2 GPUs per user, which is enough for the short
 `base_model` arm. Run the other arms on `long`, which is preemptible. The
-configs checkpoint every 50 steps (10 for `grpo` and `value`) and resume after
-a requeue.
+configs checkpoint every 50 steps and resume after a requeue.
 
 `cluv submit` blocks until its job starts, so submit in the background. Space
 the submissions apart so their remote `git pull` calls don't overlap:
