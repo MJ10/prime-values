@@ -1,0 +1,98 @@
+# Random integer generation: reward maximization vs distribution matching
+
+A replication of the motivating experiment in Hu et al., *Amortizing
+intractable inference in large language models* ([arXiv:2310.04363](https://arxiv.org/abs/2310.04363),
+Section 2). The model is prompted with
+
+```text
+The following is a random integer drawn uniformly between 0 and 100: 
+```
+
+(trailing space included, no chat markup). The paper reports that GPT-J 6B
+emits a valid number only 50.5% of the time, with a KL of 3.37 to uniform. PPO
+on a validity reward reaches 95.8% valid numbers but stays highly skewed,
+because every valid number earns the same reward and so there is no gradient
+toward uniformity. GFlowNet fine-tuning reaches 100% valid numbers with a KL
+of about 1e-4.
+
+## Setup
+
+`base.toml` holds everything the arms share:
+
+- `Qwen/Qwen3-1.7B-Base` with full fine-tuning (the paper used GPT-J 6B with
+  LoRA). Qwen tokenizes digits one at a time, so every number has exactly one
+  token sequence.
+- The `random-number` env (`environments/random_number`). Generation stops at
+  the first token containing a separator (newline, space, punctuation) or at
+  EOS, so a rollout can end right after any digit. This matches the paper's
+  GFlowNet, which can terminate at every state. A rollout is valid when it is
+  exactly the digit tokens of a canonical integer in `[0, 100]` (no leading
+  zeros) plus that one terminating token. Every number therefore has the same
+  set of valid completions. Valid rollouts get reward 1 and invalid ones get 0.
+  The `number` metric records the parsed value, or -1 when the rollout is
+  invalid.
+- Sampling at temperature 1, with at most 6 completion tokens. 256 rollouts per
+  step for 300 steps, with lr 2e-6.
+- One GPU for inference and one for the trainer. The value arm adds a value
+  trainer and a value evaluator, for four GPUs in total.
+
+## Arms
+
+| Arm | Credit | Group size | Paper analogue |
+| --- | --- | ---: | --- |
+| `base_model` | none (lr 0, 40 steps) | 16 | base model |
+| `grpo` | `R - mean(R_group)` | 16 | reward maximization |
+| `value` | `R - V_t` (learned critic, GAE) | 1 | PPO |
+| `gfn` | `(log R - log π) - mean(group)` | 16 | GFlowNet fine-tuning |
+
+`gfn` is on-policy trajectory balance, with the group mean of `log R - log π`
+standing in for `log Z`. Its expected gradient is the reverse-KL gradient
+toward `π ∝ R`, so it stops only once valid numbers are uniform. Invalid
+rollouts are floored at `min_reward = 1e-4`.
+
+## Launch
+
+Mila is the default: the runs are small, and A100L or L40S nodes are usually
+idle. The three two-GPU arms fit the `main` QOS defaults. The four-GPU value
+arm needs `short-unkillable` (at most 3 hours) or `long`.
+
+`cluv submit` blocks until its job starts, so submit in the background. Space
+the submissions apart so their remote `git pull` calls don't overlap:
+
+```bash
+for arm in base_model grpo gfn; do
+  uv run scripts/cluv_prime_rl.py submit mila --time=3:00:00 \
+    -- rl @ configs/random_number/base.toml @ configs/random_number/arms/$arm.toml \
+    --wandb.name $arm > cluv-submit-$arm.log 2>&1 &
+  sleep 60
+done
+uv run scripts/cluv_prime_rl.py submit mila \
+  --partition=short-unkillable --gpus-per-node=a100l:4 --cpus-per-task=16 --mem=128G --time=3:00:00 \
+  -- rl @ configs/random_number/base.toml @ configs/random_number/arms/value.toml \
+  --wandb.name value > cluv-submit-value.log 2>&1 &
+wait
+```
+
+Jobs read the shared remote checkout when they start. Don't sync a new commit
+to the cluster while any arm is still queued.
+
+## Analysis
+
+`uv run scripts/cluv_prime_rl.py sync mila` fetches each run to
+`~/scratch/prime-values/mila_<job-id>/`. Then run:
+
+```bash
+uv run scripts/random_number_report.py \
+  base=~/scratch/prime-values/mila_<id> grpo=... value=... gfn=... \
+  --out outputs/random_number_report
+```
+
+The script pools the last 10 steps of each arm (2,560 samples) and reports:
+
+- the valid fraction
+- KL from the valid numbers' empirical distribution to uniform on `[0, 100]`
+- entropy and the number of distinct values
+
+It writes Figure 2-style log-scale histograms and per-step curves. With 2,560
+samples, an exactly uniform sampler still shows an empirical KL of about
+`100 / (2 × 2560) ≈ 0.02`.
