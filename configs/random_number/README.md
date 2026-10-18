@@ -81,18 +81,20 @@ configs checkpoint every 50 steps and resume after a requeue.
 the submissions apart so their remote `git pull` calls don't overlap:
 
 ```bash
-C="rl @ configs/random_number/base.toml @ configs/random_number/arms"
 uv run scripts/cluv_prime_rl.py submit mila --gpus-per-node=l40s:2 --time=1:00:00 \
-  -- $C/base_model.toml --wandb.name base_model > cluv-submit-base_model.log 2>&1 &
+  -- rl @ configs/random_number/base.toml @ configs/random_number/arms/base_model.toml \
+  --wandb.name base_model > cluv-submit-base_model.log 2>&1 &
 sleep 60
 for arm in grpo gfn; do
   uv run scripts/cluv_prime_rl.py submit mila --partition=long --gpus-per-node=l40s:2 --time=6:00:00 \
-    -- $C/$arm.toml --wandb.name $arm > cluv-submit-$arm.log 2>&1 &
+    -- rl @ configs/random_number/base.toml @ configs/random_number/arms/$arm.toml \
+    --wandb.name $arm > cluv-submit-$arm.log 2>&1 &
   sleep 60
 done
 uv run scripts/cluv_prime_rl.py submit mila --partition=long --gpus-per-node=l40s:4 \
   --cpus-per-task=16 --mem=128G --time=6:00:00 \
-  -- $C/value.toml --wandb.name value > cluv-submit-value.log 2>&1 &
+  -- rl @ configs/random_number/base.toml @ configs/random_number/arms/value.toml \
+  --wandb.name value > cluv-submit-value.log 2>&1 &
 wait
 ```
 
