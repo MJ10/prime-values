@@ -159,6 +159,24 @@ uv run scripts/cluv_prime_rl.py run mila -- \
   --output-dir cluv-results/my-run
 ```
 
+`cluv run` resolves the remote directory from the local path relative to
+`$HOME` and ignores the cluster's `project_dir`, so it fails with `No such file
+or directory` on Mila, and from any git worktree. Run one-off remote commands
+(tests, dry runs) over ssh in the synced checkout instead, using a login shell
+so `uv` is on `PATH`:
+
+```bash
+ssh mila 'bash -lc "cd \$SCRATCH/Projects/prime-values && uv run --no-sync pytest -q tests/unit"'
+```
+
+On 2026-10-18, single-node jobs on Mila A100L nodes `cn-g028` and `cn-g029`
+failed at startup in two ways. Imports raised `FileNotFoundError` for `.venv`
+files that existed, and vLLM raised `OSError: [Errno 121] Remote I/O error`
+when closing a log file descriptor on `/network/scratch`. The same commit ran
+cleanly on L40S nodes. If either error shows up, check the files from the
+login node first. If they are intact, resubmit with another GPU type (or
+`--exclude` the node) rather than rebuilding the environment.
+
 See `docs/cluv.md` for cluster overrides, result fetching, and the `first`
 cluster workflow. Before adding a cluster, use `cluv_prime_rl.py sh sacctmgr`
 and `cluv_prime_rl.py sh sinfo` as documented there; do not guess its account,

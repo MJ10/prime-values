@@ -6,7 +6,9 @@ max_steps = 300
 seq_len = 128
 
 [model]
-name = "Qwen/Qwen3-1.7B-Base"
+# The most skewed of the Qwen models surveyed (KL 0.47 to uniform over 4000
+# samples; Qwen3-1.7B-Base is near-uniform at 0.055).
+name = "Qwen/Qwen2.5-1.5B-Instruct"
 
 [wandb]
 project = "random-number"

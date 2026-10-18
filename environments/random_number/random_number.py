@@ -10,16 +10,18 @@ LEADING_DIGITS = re.compile(r"[0-9]+")
 
 def parse_number(text: str, num_tokens: int, low: int, high: int) -> int | None:
     """The integer a completion names, or None unless it is a canonical integer
-    in ``[low, high]`` followed by exactly one terminating token.
+    in ``[low, high]`` followed by exactly one terminating token: EOS (which the
+    renderer strips from ``text``) or a whitespace/punctuation token.
 
     Assumes one token per digit (true of Qwen tokenizers), so every number has
-    the same set of valid completions: its digits, then any token that ends
-    generation (EOS or one matching a sampling stop string)."""
+    the same set of valid completions."""
     match = LEADING_DIGITS.match(text)
     if match is None:
         return None
     digits = match.group()
     if num_tokens != len(digits) + 1 or digits != str(int(digits)):
+        return None
+    if any(char.isalnum() for char in text[match.end() :]):
         return None
     number = int(digits)
     return number if low <= number <= high else None

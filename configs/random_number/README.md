@@ -19,16 +19,31 @@ of about 1e-4.
 
 `base.toml` holds everything the arms share:
 
-- `Qwen/Qwen3-1.7B-Base` with full fine-tuning (the paper used GPT-J 6B with
-  LoRA). Qwen tokenizes digits one at a time, so every number has exactly one
-  token sequence.
+- `Qwen/Qwen2.5-1.5B-Instruct` with full fine-tuning (the paper used an
+  instruction-tuned GPT-J 6B with LoRA). Qwen tokenizes digits one at a time,
+  so every number has exactly one token sequence. Modern Qwen models are much
+  closer to uniform on this prompt than GPT-J (KL 3.37). Over 4,000 samples
+  with the env's validity rule:
+
+  | Model | Valid | KL to uniform | Most frequent |
+  | --- | ---: | ---: | --- |
+  | Qwen3-1.7B-Base | 96.2% | 0.055 | 75, 50, 25 |
+  | Qwen3-1.7B | 96.5% | 0.259 | 42, 47, 37 |
+  | Qwen2.5-1.5B | 95.4% | 0.301 | 45, 42, 50 |
+  | Qwen3-4B-Instruct-2507 | 99.8% | 0.188 | 32, 34, 37 |
+  | Qwen2.5-1.5B-Instruct | 96.3% | 0.472 | 45, 42, 43 |
+
+  Instruction tuning adds skew, as the paper suggests. The study uses the most
+  skewed model. Sampling noise alone gives a KL of about 0.013 at this sample
+  size.
 - The `random-number` env (`environments/random_number`). Generation stops at
   the first token containing a separator (newline, space, punctuation) or at
   EOS, so a rollout can end right after any digit. This matches the paper's
   GFlowNet, which can terminate at every state. A rollout is valid when it is
   exactly the digit tokens of a canonical integer in `[0, 100]` (no leading
-  zeros) plus that one terminating token. Every number therefore has the same
-  set of valid completions. Valid rollouts get reward 1 and invalid ones get 0.
+  zeros) plus that one terminating token, and the terminator is EOS or contains
+  only whitespace and punctuation (`"."`, `","`, `"\n"`, but not `" The"`).
+  Every number therefore has the same set of valid completions. Valid rollouts get reward 1 and invalid ones get 0.
   The `number` metric records the parsed value, or -1 when the rollout is
   invalid.
 - Sampling at temperature 1, with at most 6 completion tokens. 256 rollouts per
@@ -48,7 +63,8 @@ of about 1e-4.
 `gfn` is on-policy trajectory balance, with the group mean of `log R - log π`
 standing in for `log Z`. Its expected gradient is the reverse-KL gradient
 toward `π ∝ R`, so it stops only once valid numbers are uniform. Invalid
-rollouts are floored at `min_reward = 1e-4`.
+rollouts are floored at `min_reward = 1e-10`; at `1e-4`, the many invalid
+sequences carry enough target mass that validity fell during training.
 
 ## Launch
 
