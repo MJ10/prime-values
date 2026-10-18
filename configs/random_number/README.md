@@ -68,24 +68,31 @@ sequences carry enough target mass that validity fell during training.
 
 ## Launch
 
-Mila is the default: the runs are small, and A100L or L40S nodes are usually
-idle. The three two-GPU arms fit the `main` QOS defaults. The four-GPU value
-arm needs `short-unkillable` (at most 3 hours) or `long`.
+The runs are small, so Mila is the default. Use L40S nodes: on 2026-10-18,
+jobs on A100L nodes `cn-g028` and `cn-g029` failed with BeeGFS I/O errors (see
+the start-run skill). Steps average about 27 s, so a 300-step arm takes about
+2.5 hours.
+
+Mila's `main` QOS allows 2 GPUs per user, which is enough for the short
+`base_model` arm. Run the other arms on `long`, which is preemptible; the
+configs checkpoint every 50 steps and resume after a requeue.
 
 `cluv submit` blocks until its job starts, so submit in the background. Space
 the submissions apart so their remote `git pull` calls don't overlap:
 
 ```bash
-for arm in base_model grpo gfn; do
-  uv run scripts/cluv_prime_rl.py submit mila --time=3:00:00 \
-    -- rl @ configs/random_number/base.toml @ configs/random_number/arms/$arm.toml \
-    --wandb.name $arm > cluv-submit-$arm.log 2>&1 &
+C="rl @ configs/random_number/base.toml @ configs/random_number/arms"
+uv run scripts/cluv_prime_rl.py submit mila --gpus-per-node=l40s:2 --time=1:00:00 \
+  -- $C/base_model.toml --wandb.name base_model > cluv-submit-base_model.log 2>&1 &
+sleep 60
+for arm in grpo gfn; do
+  uv run scripts/cluv_prime_rl.py submit mila --partition=long --gpus-per-node=l40s:2 --time=6:00:00 \
+    -- $C/$arm.toml --wandb.name $arm > cluv-submit-$arm.log 2>&1 &
   sleep 60
 done
-uv run scripts/cluv_prime_rl.py submit mila \
-  --partition=short-unkillable --gpus-per-node=a100l:4 --cpus-per-task=16 --mem=128G --time=3:00:00 \
-  -- rl @ configs/random_number/base.toml @ configs/random_number/arms/value.toml \
-  --wandb.name value > cluv-submit-value.log 2>&1 &
+uv run scripts/cluv_prime_rl.py submit mila --partition=long --gpus-per-node=l40s:4 \
+  --cpus-per-task=16 --mem=128G --time=6:00:00 \
+  -- $C/value.toml --wandb.name value > cluv-submit-value.log 2>&1 &
 wait
 ```
 
