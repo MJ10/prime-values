@@ -9,5 +9,8 @@
 type = "gfn"
 min_reward = 1e-60
 
-# Keeps the overlay loadable on its own (tests/unit/test_configs.py).
-[trainer]
+# The advantage's log π comes from the sampler, one update behind the trainer,
+# so large steps overshoot: at 2e-6 the policy reached uniform by step ~18, then
+# over-boosted the underweighted numbers and lost half its validity.
+[trainer.optim]
+lr = 5e-7
