@@ -3,11 +3,12 @@
 # dependencies = ["matplotlib", "numpy"]
 # ///
 """Summarize random-number study runs (configs/random_number) from their saved
-train rollouts: validity, KL to uniform, and Figure 2-style histograms.
+train rollouts, or from large samples written by scripts/random_number_sample.py
+(a ``.json`` path): validity, KL to uniform, and Figure 2-style histograms.
 
     uv run scripts/random_number_report.py base=~/scratch/prime-values/mila_1 \\
         grpo=~/scratch/prime-values/mila_2 gfn@150=~/scratch/prime-values/mila_3@150 \\
-        --out outputs/random_number_report
+        gfn_512k=~/scratch/prime-values/mila_4/numbers.json --out outputs/random_number_report
 """
 
 import argparse
@@ -36,6 +37,13 @@ def load_numbers(run_dir: Path) -> dict[int, list[int]]:
     return steps
 
 
+def load_sample(path: Path) -> list[int]:
+    """A random_number_sample.py result, expanded to one entry per sample (-1 when invalid)."""
+    sample = json.loads(path.read_text())
+    numbers = [sample["low"] + offset for offset, count in enumerate(sample["counts"]) for _ in range(count)]
+    return numbers + [-1] * sample["invalid"]
+
+
 def summarize(numbers: list[int]) -> dict[str, float]:
     """Validity, plus KL and entropy of the valid numbers' empirical distribution
     against the uniform target on ``[LOW, HIGH]`` (the paper's KL)."""
@@ -59,18 +67,19 @@ def main() -> None:
     parser.add_argument("--out", type=Path, default=Path("outputs/random_number_report"))
     args = parser.parse_args()
 
-    runs = {}
+    runs, finals = {}, {}
     for spec in args.runs:
         label, _, rest = spec.partition("=")
         path, _, last_step = rest.partition("@")
-        steps = load_numbers(Path(path).expanduser())
+        path = Path(path).expanduser()
+        if path.suffix == ".json":
+            finals[label] = load_sample(path)
+            continue
+        steps = load_numbers(path)
         runs[label] = {step: numbers for step, numbers in steps.items() if not last_step or step <= int(last_step)}
+        final_steps = sorted(runs[label])[-args.window :]
+        finals[label] = [n for step in final_steps for n in runs[label][step]]
     args.out.mkdir(parents=True, exist_ok=True)
-
-    finals = {}
-    for label, steps in runs.items():
-        final_steps = sorted(steps)[-args.window :]
-        finals[label] = [n for step in final_steps for n in steps[step]]
 
     rows = [f"| arm | samples | valid | KL to uniform | entropy (bits, max {np.log2(SUPPORT):.2f}) | unique |"]
     rows.append("| --- | ---: | ---: | ---: | ---: | ---: |")
@@ -79,7 +88,7 @@ def main() -> None:
         kl, entropy = (f"{s['kl_to_uniform']:.4f}", f"{s['entropy_bits']:.2f}") if s["unique"] else ("—", "—")
         rows.append(f"| {label} | {s['samples']} | {s['valid']:.1%} | {kl} | {entropy} | {s['unique']}/{SUPPORT} |")
     table = "\n".join(rows)
-    print(f"Last {args.window} steps per run:\n\n{table}")
+    print(f"Last {args.window} steps per run (all samples for .json inputs):\n\n{table}")
     (args.out / "summary.md").write_text(table + "\n")
 
     fig, axes = plt.subplots(1, len(finals), figsize=(4.5 * len(finals), 3.2), sharey=True, squeeze=False)

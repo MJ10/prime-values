@@ -35,22 +35,30 @@ of about 1e-4.
 
   Instruction tuning adds skew, as the paper suggests. The study uses the most
   skewed model. Sampling noise alone gives a KL of about 0.013 at this sample
-  size. Under the env's stricter terminator rule (below), Qwen2.5-1.5B-Instruct
-  is 74.8% valid with a KL of 0.64: it ends 73% of its numbers with `"."`, and
-  most of the rest with merged tokens such as `".\n\n"` or with `","`.
-- The `random-number` env (`environments/random_number`). Generation stops at
-  EOS or at the first token containing `"\n"` or `"."`, so a rollout can end
-  right after any digit. This matches the paper's GFlowNet, which can terminate
-  at every state. A rollout is valid when it is exactly the digit tokens of a
-  canonical integer in `[0, 100]` (no leading zeros) plus one terminator token:
-  EOS, `"\n"` or `"."`. Merged tokens such as `".\n"` and other punctuation
-  such as `","` are invalid. Every number therefore has the same small set of
-  valid completions, so a distribution that is uniform over valid completions
-  is also uniform over numbers. Valid rollouts get reward 1 and invalid ones
-  get 0. The `number` metric records the parsed value, or -1 when the rollout
-  is invalid.
-- Sampling at temperature 1, with at most 5 completion tokens (a valid rollout
-  has at most 4). 256 rollouts per step for 300 steps, with lr 2e-6.
+  size.
+- The `random-number` env (`environments/random_number`), with one stop action
+  like the paper's EOS. The terminator is `"\n"`: Qwen2.5-1.5B-Instruct ended
+  1 of 10,302 base samples with EOS after a number, so EOS is out of reach. It
+  ends 73% of its numbers with `"."`, about 1.5% with a lone `"\n"` token, and
+  most of the rest with merged tokens such as `".\n\n"` or with `","`, so the
+  base model is only about 1.5% valid under this rule. Generation stops at the
+  first token containing `"\n"`, so a rollout can end right after any digit,
+  like the paper's GFlowNet, which can terminate at every state. A rollout is
+  valid when it is exactly the digit tokens of a canonical integer in
+  `[0, 100]` (no leading zeros) plus one `"\n"` token. Every number therefore
+  has exactly one valid completion.
+- The reward is `exp(log R)`, following the paper's reward:
+  - `log R = 0` for a valid rollout.
+  - `log R = -8 - 8 * (1 + 2 + ... + L)` for an invalid rollout of `L` tokens.
+    This is the paper's per-position penalty, measured against its +8 for a
+    valid number.
+
+  Invalid rewards are at most `e^-16`, so grpo and value see what is in effect
+  a 0/1 validity reward. The `valid_number` metric is the exact 0/1 validity,
+  and `number` is the parsed value, or -1 when the rollout is invalid.
+- Sampling at temperature 1, with at most 5 completion tokens, the paper's
+  `max_len` (a valid rollout has at most 4). 256 rollouts per step for 300
+  steps, with lr 2e-6.
 - One GPU for inference and one for the trainer. The value arm adds a value
   trainer and a value evaluator, for four GPUs in total.
 
@@ -67,21 +75,21 @@ of about 1e-4.
 standing in for `log Z`. Its expected gradient is the reverse-KL gradient
 toward `π ∝ R`, so it stops only once valid numbers are uniform.
 
-Invalid rollouts have reward 0, which `gfn` floors at `min_reward = 1e-40`.
-The floor is each invalid completion's target weight relative to a valid one,
-and there are about `V^5 ≈ 8e25` invalid completions of up to 5 tokens
-(vocab `V ≈ 152k`). A floor above `1/V^5 ≈ 1e-26` therefore makes the target
-mostly gibberish, and the policy drifts toward it as its entropy grows. A
-floor of `1e-10` with 6-token completions held for about 220 steps and then
-collapsed to 0% valid. At `1e-40`, invalid completions hold about `1e-17` of
-the target mass. The cost is a large negative advantage (about −90) on each
-invalid rollout, which drives validity toward 100%, as in the paper.
+The target needs the invalid completions to carry negligible total mass.
+There are up to `V^L` of them at length `L` (vocab `V ≈ 152k`). The quadratic
+penalty brings their total weight to `Σ_L V^L e^(-8 - 4L(L+1)) ≈ 0.017`,
+against 101 for the valid numbers, so about 0.02% of the target is invalid,
+as in the paper. A flat reward floor fails here: with `min_reward = 1e-10` and
+6-token completions, invalid mass was about `1e21`. That `gfn` run held a KL
+of 0.03–0.05 to uniform for about 220 steps, then drifted into gibberish and
+reached 0% valid. `gfn`'s `min_reward = 1e-60` sits below the smallest env
+reward (`e^-128`), so it only catches rollouts that failed with reward 0.
 
-`grpo` and `value` see the same binary validity reward under the stricter
-rule. With the base model at 75% valid instead of 96%, they have more to learn
-before validity saturates. After that every advantage is zero and the
-orchestrator stops them after 10 empty batches, which is the paper's
-zero-gradient argument.
+`grpo` and `value` start from about 1.5% validity and learn to emit
+`number + "\n"`. Once validity saturates, every advantage is zero, and the
+orchestrator stops the run after 10 consecutive empty batches. This is the
+paper's zero-gradient argument. Both arms therefore checkpoint every 10 steps,
+so the last weights are the final policy.
 
 ## Launch
 
@@ -91,8 +99,9 @@ the start-run skill). Steps average about 27 s, so a 300-step arm takes about
 2.5 hours.
 
 Mila's `main` QOS allows 2 GPUs per user, which is enough for the short
-`base_model` arm. Run the other arms on `long`, which is preemptible; the
-configs checkpoint every 50 steps and resume after a requeue.
+`base_model` arm. Run the other arms on `long`, which is preemptible. The
+configs checkpoint every 50 steps (10 for `grpo` and `value`) and resume after
+a requeue.
 
 `cluv submit` blocks until its job starts, so submit in the background. Space
 the submissions apart so their remote `git pull` calls don't overlap:
@@ -138,3 +147,22 @@ The script pools the last 10 steps of each arm (2,560 samples) and reports:
 It writes Figure 2-style log-scale histograms and per-step curves. With 2,560
 samples, an exactly uniform sampler still shows an empirical KL of about
 `100 / (2 × 2560) ≈ 0.02`.
+
+### Figure 2 from large samples
+
+The paper's Figure 2 draws 512k samples from each final model.
+`scripts/random_number_sample.py` does the same with vLLM. It uses the env's
+prompt, terminator and parser, with every sampling knob set explicitly. Submit
+one single-GPU job per model. Pass `Qwen/Qwen2.5-1.5B-Instruct` for the base
+model, or a run's final `weights/step_<n>` directory on the cluster as an
+absolute path:
+
+```bash
+uv run scripts/cluv_prime_rl.py submit mila --gpus-per-node=l40s:1 --time=1:00:00 \
+  -- python scripts/random_number_sample.py /network/scratch/.../mila_<id>/weights/step_<n> \
+  --num-samples 512000 > cluv-submit-sample.log 2>&1 &
+```
+
+Each job writes `numbers.json` to its own run directory. After a sync, pass
+those files to the report as `label=.../numbers.json`; it pools all of their
+samples instead of the last 10 steps.

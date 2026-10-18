@@ -20,5 +20,10 @@ resume_step = -1
 gpus_per_node = 4
 num_value_train_gpus = 1
 
+# Once validity saturates every advantage is zero and the orchestrator stops
+# the run, so checkpoint often enough that the last weights are the final policy.
+[ckpt]
+interval = 10
+
 # Keeps the overlay loadable on its own (tests/unit/test_configs.py).
 [trainer]

@@ -1,14 +1,13 @@
-# Distribution matching (GFlowNet fine-tuning): sample numbers in proportion
-# to reward, i.e. uniformly over valid numbers. Invalid outputs get target
-# weight min_reward relative to a valid one. There are about V^5 ≈ 8e25 invalid
-# completions of up to 5 tokens (V ≈ 152k), so min_reward must sit far below
-# 1/V^5 ≈ 1e-26 for them to carry negligible target mass: at 1e-40 their share
-# is about 1e-17. A floor above 1/V^5 makes the target mostly gibberish, and
-# the policy drifts there once its entropy grows.
+# Distribution matching (GFlowNet fine-tuning): sample completions in
+# proportion to the env's reward, exp(log R). Valid numbers share log R = 0 and
+# invalid completions get a length-scaled penalty, so the target is uniform over
+# numbers with about 2e-4 of its mass on invalid completions. The env never
+# returns less than e^-128 (a 5-token invalid completion); the floor sits below
+# that and only catches rollouts that failed with reward 0.
 
 [orchestrator.algo]
 type = "gfn"
-min_reward = 1e-40
+min_reward = 1e-60
 
 # Keeps the overlay loadable on its own (tests/unit/test_configs.py).
 [trainer]
