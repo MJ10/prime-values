@@ -37,16 +37,16 @@ of about 1e-4.
   skewed model. Sampling noise alone gives a KL of about 0.013 at this sample
   size.
 - The `random-number` env (`environments/random_number`), with one stop action
-  like the paper's EOS. The terminator is `"\n"`: Qwen2.5-1.5B-Instruct ended
-  1 of 10,302 base samples with EOS after a number, so EOS is out of reach. It
-  ends 73% of its numbers with `"."`, about 1.5% with a lone `"\n"` token, and
-  most of the rest with merged tokens such as `".\n\n"` or with `","`, so the
-  base model is only about 1.5% valid under this rule. Generation stops at the
-  first token containing `"\n"`, so a rollout can end right after any digit,
-  like the paper's GFlowNet, which can terminate at every state. A rollout is
-  valid when it is exactly the digit tokens of a canonical integer in
-  `[0, 100]` (no leading zeros) plus one `"\n"` token. Every number therefore
-  has exactly one valid completion.
+  like the paper's EOS. The terminator is `"."`, not EOS:
+  Qwen2.5-1.5B-Instruct ended 1 of 10,302 base samples with EOS after a
+  number, while it ends 73% of its numbers with a lone `"."` token. That puts
+  the base model at about 73% valid, near GPT-J's 50.5% in the paper.
+  Generation stops at the first token containing `"."`, so a rollout can end
+  right after any digit, like the paper's GFlowNet, which can terminate at
+  every state. A rollout is valid when it is exactly the digit tokens of a
+  canonical integer in `[0, 100]` (no leading zeros) plus one `"."` token.
+  Merged tokens such as `".\n"` and `".\n\n"` also stop generation but are
+  invalid, so every number has exactly one valid completion.
 - The reward is `exp(log R)`, following the paper's reward:
   - `log R = 0` for a valid rollout.
   - `log R = -8 - 8 * (1 + 2 + ... + L)` for an invalid rollout of `L` tokens.
@@ -85,8 +85,7 @@ of 0.03–0.05 to uniform for about 220 steps, then drifted into gibberish and
 reached 0% valid. `gfn`'s `min_reward = 1e-60` sits below the smallest env
 reward (`e^-128`), so it only catches rollouts that failed with reward 0.
 
-`grpo` and `value` start from about 1.5% validity and learn to emit
-`number + "\n"`. Once validity saturates, every advantage is zero, and the
+`grpo` and `value` start from about 73% validity. Once validity saturates, every advantage is zero, and the
 orchestrator stops the run after 10 consecutive empty batches. This is the
 paper's zero-gradient argument. Both arms therefore checkpoint every 10 steps,
 so the last weights are the final policy.

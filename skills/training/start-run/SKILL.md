@@ -173,7 +173,8 @@ On 2026-10-18, single-node jobs on Mila A100L nodes `cn-g028` and `cn-g029`
 failed at startup in two ways. Imports raised `FileNotFoundError` for `.venv`
 files that existed, and vLLM raised `OSError: [Errno 121] Remote I/O error`
 when closing a log file descriptor on `/network/scratch`. The same commit ran
-cleanly on L40S nodes. If either error shows up, check the files from the
+cleanly on most L40S nodes, but L40S node `cn-l038` hit the same
+`FileNotFoundError` the same day. If either error shows up, check the files from the
 login node first. If they are intact, resubmit with another GPU type (or
 `--exclude` the node) rather than rebuilding the environment.
 

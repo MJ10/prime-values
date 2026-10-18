@@ -8,15 +8,16 @@ import verifiers as vf
 PROMPT = "The following is a random integer drawn uniformly between {low} and {high}: "
 LEADING_DIGITS = re.compile(r"[0-9]+")
 # The one stop action, like EOS in the paper's GPT-J setup (Qwen2.5-Instruct
-# almost never emits EOS after this raw prompt). It must also be the sampling
-# stop string, so generation ends at the first token containing it.
-TERMINATOR = "\n"
+# almost never emits EOS after this raw prompt, and ends most numbers with ".").
+# It must also be the sampling stop string, so generation ends at the first
+# token containing it.
+TERMINATOR = "."
 
 
 def parse_number(text: str, num_tokens: int, low: int, high: int) -> int | None:
     """The integer a completion names, or None unless it is a canonical integer
     in ``[low, high]`` followed by exactly one ``TERMINATOR`` token (merged
-    tokens such as ``".\\n"`` or ``"\\n\\n"`` do not count).
+    tokens such as ``".\\n"`` or ``".\\n\\n"`` do not count).
 
     Assumes one token per digit (true of Qwen tokenizers), so every number has
     exactly one valid completion."""
