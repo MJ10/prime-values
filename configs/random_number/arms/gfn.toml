@@ -5,3 +5,6 @@
 [orchestrator.algo]
 type = "gfn"
 min_reward = 1e-4
+
+# Keeps the overlay loadable on its own (tests/unit/test_configs.py).
+[trainer]

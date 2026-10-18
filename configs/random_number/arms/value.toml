@@ -19,3 +19,6 @@ resume_step = -1
 [deployment]
 gpus_per_node = 4
 num_value_train_gpus = 1
+
+# Keeps the overlay loadable on its own (tests/unit/test_configs.py).
+[trainer]
