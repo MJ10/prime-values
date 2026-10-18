@@ -6,7 +6,8 @@
 train rollouts: validity, KL to uniform, and Figure 2-style histograms.
 
     uv run scripts/random_number_report.py base=~/scratch/prime-values/mila_1 \\
-        grpo=~/scratch/prime-values/mila_2 ... --out outputs/random_number_report
+        grpo=~/scratch/prime-values/mila_2 gfn@150=~/scratch/prime-values/mila_3@150 \\
+        --out outputs/random_number_report
 """
 
 import argparse
@@ -53,15 +54,17 @@ def summarize(numbers: list[int]) -> dict[str, float]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("runs", nargs="+", help="label=run_dir pairs, in plotting order")
+    parser.add_argument("runs", nargs="+", help="label=run_dir[@last_step] pairs, in plotting order; @last_step ends the pooled window early")
     parser.add_argument("--window", type=int, default=10, help="final steps pooled into the histogram and table")
     parser.add_argument("--out", type=Path, default=Path("outputs/random_number_report"))
     args = parser.parse_args()
 
     runs = {}
     for spec in args.runs:
-        label, _, path = spec.partition("=")
-        runs[label] = load_numbers(Path(path).expanduser())
+        label, _, rest = spec.partition("=")
+        path, _, last_step = rest.partition("@")
+        steps = load_numbers(Path(path).expanduser())
+        runs[label] = {step: numbers for step, numbers in steps.items() if not last_step or step <= int(last_step)}
     args.out.mkdir(parents=True, exist_ok=True)
 
     finals = {}
@@ -73,10 +76,8 @@ def main() -> None:
     rows.append("| --- | ---: | ---: | ---: | ---: | ---: |")
     for label, numbers in finals.items():
         s = summarize(numbers)
-        rows.append(
-            f"| {label} | {s['samples']} | {s['valid']:.1%} | {s['kl_to_uniform']:.4f} "
-            f"| {s['entropy_bits']:.2f} | {s['unique']}/{SUPPORT} |"
-        )
+        kl, entropy = (f"{s['kl_to_uniform']:.4f}", f"{s['entropy_bits']:.2f}") if s["unique"] else ("—", "—")
+        rows.append(f"| {label} | {s['samples']} | {s['valid']:.1%} | {kl} | {entropy} | {s['unique']}/{SUPPORT} |")
     table = "\n".join(rows)
     print(f"Last {args.window} steps per run:\n\n{table}")
     (args.out / "summary.md").write_text(table + "\n")
