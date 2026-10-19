@@ -173,10 +173,10 @@ On 2026-10-18, single-node jobs on Mila A100L nodes `cn-g028` and `cn-g029`
 failed at startup in two ways. Imports raised `FileNotFoundError` for `.venv`
 files that existed, and vLLM raised `OSError: [Errno 121] Remote I/O error`
 when closing a log file descriptor on `/network/scratch`. The same commit ran
-cleanly on most L40S nodes. The same day, though, L40S node `cn-l038` hit the
-`FileNotFoundError`, and `cn-l040` failed with `OSError: could not get source
-code` (an unreadable `.py` file). If any of these errors shows up, check the files from the
-login node first. If they are intact, resubmit with another GPU type (or
+cleanly on most L40S nodes. The same day, though, L40S nodes `cn-l038` and
+`cn-l052` hit the `FileNotFoundError`, and `cn-l040` failed with
+`OSError: could not get source code` (an unreadable `.py` file). If any of
+these errors shows up, check the files from the login node first. If they are intact, resubmit with another GPU type (or
 `--exclude` the node) rather than rebuilding the environment.
 
 See `docs/cluv.md` for cluster overrides, result fetching, and the `first`
