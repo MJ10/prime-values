@@ -8,6 +8,7 @@ from renderers import AutoRendererConfig, RendererConfig
 
 from prime_rl.configs.algorithm import (
     AlgoConfig,
+    GFNAlgoConfig,
     GRPOAlgoConfig,
 )
 from prime_rl.configs.shared import (
@@ -609,6 +610,18 @@ class OrchestratorConfig(BaseConfig):
         for env_cfg in self.train.env:
             if env_cfg.algo is None:
                 env_cfg.algo = self.algo.model_copy(deep=True)
+        return self
+
+    @model_validator(mode="after")
+    def validate_gfn_temperature(self):
+        """gfn reads sampling logprobs as the policy's own log-probabilities,
+        which holds only at temperature 1."""
+        for env_cfg in self.train.env:
+            if isinstance(env_cfg.algo, GFNAlgoConfig) and env_cfg.sampling.temperature != 1.0:
+                raise ValueError(
+                    f"train env '{env_cfg.resolved_name}' uses the gfn algorithm, which needs sampling "
+                    f"temperature 1.0 (got {env_cfg.sampling.temperature})"
+                )
         return self
 
     @property

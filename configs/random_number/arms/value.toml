@@ -1,0 +1,29 @@
+# Reward maximization with a learned critic (PPO-style, the paper's baseline):
+# one rollout per prompt, A_t = R - V_t.
+
+[orchestrator]
+group_size = 1
+# Once validity saturates every advantage is zero. Ship those rollouts instead
+# of filtering them, so the run trains on zero advantages to max_steps (the
+# paper's zero-gradient argument) and saves final weights, rather than stopping
+# after 10 empty batches.
+post_batch_filters = [{ type = "gibberish" }, { type = "repetition" }, { type = "zero_advantage", enforce = false }]
+
+[orchestrator.algo]
+type = "grpo"
+
+[orchestrator.algo.baseline]
+type = "value"
+
+[value_function]
+
+[value_function.ckpt]
+interval = 50
+resume_step = -1
+
+[deployment]
+gpus_per_node = 4
+num_value_train_gpus = 1
+
+# Keeps the overlay loadable on its own (tests/unit/test_configs.py).
+[trainer]

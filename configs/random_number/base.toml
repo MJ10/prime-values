@@ -1,0 +1,54 @@
+# Shared setup for the random-number study (arXiv:2310.04363, Section 2).
+# Compose with exactly one arm overlay:
+#   uv run rl @ configs/random_number/base.toml @ configs/random_number/arms/<arm>.toml
+
+max_steps = 300
+seq_len = 128
+
+[model]
+# The most skewed of the Qwen models surveyed (KL 0.47 to uniform over 4000
+# samples; Qwen3-1.7B-Base is near-uniform at 0.055).
+name = "Qwen/Qwen2.5-1.5B-Instruct"
+
+[wandb]
+project = "random-number"
+
+# Resume from the latest checkpoint after a Slurm requeue.
+[ckpt]
+interval = 50
+resume_step = -1
+keep_last = 1
+
+[orchestrator]
+batch_size = 256 # rollouts per step, identical across arms
+group_size = 16
+
+# Feed the paper's prompt verbatim as a raw completion: no chat markup.
+[orchestrator.renderer]
+name = "default"
+chat_template = "{% for message in messages %}{{ message['content'] }}{% endfor %}"
+
+# Temperature 1 so the sampled distribution is the policy's own. "." is the
+# env's one terminator, so generation stops at the first token containing it; a
+# rollout is valid only if it is the digits plus exactly a "." token (merged
+# tokens such as ".\n" also stop generation but are invalid). A valid rollout
+# has at most 4 tokens ("100."); the cap of 5 matches the paper's max_len and
+# keeps valid rollouts clear of truncation.
+[orchestrator.train.sampling]
+temperature = 1.0
+max_completion_tokens = 5
+extra_body = { stop = ["."] }
+
+[[orchestrator.train.env]]
+id = "random-number"
+
+[trainer.optim]
+lr = 2e-6
+
+[inference]
+
+[deployment]
+type = "single_node"
+gpus_per_node = 2
+num_infer_gpus = 1
+num_train_gpus = 1

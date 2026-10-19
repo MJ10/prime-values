@@ -112,6 +112,7 @@ envs = [
     "patterned-needle-in-haystack-v1",
     "prolog-v1",
     "r2e-gym-v1",
+    "random-number",
     "redsearcher-v1",
     "reverse-text",
     "reverse-text-v1",
@@ -286,6 +287,7 @@ patterned-needle-in-haystack-v1 = { path = "deps/research-environments/environme
 prolog-v1 = { path = "deps/research-environments/environments/prolog_v1", editable = true }
 r2e-gym-v1 = { path = "deps/research-environments/environments/swe/r2e_gym_v1", editable = true }
 redsearcher-v1 = { path = "deps/research-environments/environments/redsearcher_v1", editable = true }
+random-number = { path = "environments/random_number", editable = true }
 reverse-text = { path = "deps/verifiers/environments/reverse_text", editable = true }
 reverse-text-v1 = { path = "deps/verifiers/environments/reverse_text_v1", editable = true }
 s1-deepresearch-v1 = { path = "deps/research-environments/environments/s1_deepresearch_v1", editable = true }
@@ -340,6 +342,46 @@ explicit = true
 name = "pytorch-cu128-test"
 url = "https://download.pytorch.org/whl/test/cu128"
 explicit = true
+
+[tool.cluv]
+job_script_path = "scripts/cluv_job.sh"
+results_path = "$SCRATCH/prime-values"
+results_symlink = "cluv-results"
+
+[tool.cluv.local]
+env = { SCRATCH = "$HOME/scratch" }
+
+[tool.cluv.sbatch_args]
+cpus-per-task = 16
+mem = "128G"
+time = "4:00:00"
+requeue = true
+
+[tool.cluv.clusters.mila]
+project_dir = "$SCRATCH/Projects/prime-values"
+
+[tool.cluv.clusters.mila.sbatch_args]
+account = "mila"
+partition = "main"
+gpus-per-node = "a100l:2"
+cpus-per-task = 8
+mem = "48G"
+
+# Tamia compute nodes reach the internet only through this Squid proxy.
+[tool.cluv.clusters.tamia]
+project_dir = "$SCRATCH/Projects/prime-values"
+env = { http_proxy = "http://squid.tamia.ecpia.ca:3128", https_proxy = "http://squid.tamia.ecpia.ca:3128", no_proxy = "localhost,127.0.0.1,::1,tamia.ecpia.ca" }
+
+[tool.cluv.clusters.tamia.sbatch_args]
+account = "aip-bengioy"
+partition = "gpubase_bynode_b2"
+gpus-per-node = "h100:4"
+
+[tool.cluv.clusters.fir]
+sbatch_args = [
+    { account = "rrg-bengioy-ad_gpu", partition = "gpubase_bygpu_b2", gpus-per-node = "h100:2" },
+    { account = "def-bengioy_gpu", partition = "gpubase_bygpu_b2", gpus-per-node = "h100:2" },
+]
 
 [tool.ruff.lint]
 select = ["F", "I"]

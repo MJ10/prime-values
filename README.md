@@ -244,6 +244,10 @@ uv run hf auth login
 # Or set `export HF_TOKEN=...`
 ```
 
+3. To synchronize the repository and submit experiments across Slurm clusters,
+   use the bundled [cluv workflow](docs/cluv.md). It initializes the repository's
+   submodules and full uv environment on each cluster before launching a run.
+
 ## Training Examples
 We provide end-to-end training examples in the [`examples`](examples) directory to highlight features of the framework and guide you through the process of training your own models.
 

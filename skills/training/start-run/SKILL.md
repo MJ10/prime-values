@@ -133,6 +133,119 @@ curl http://localhost:8000/v1/chat/completions \
 - Entrypoint: `src/prime_rl/entrypoints/inference.py`
 - SLURM: single-node, multi-node, and disaggregated deployments
 
+## Cross-cluster launches with cluv
+
+Use the repository's pinned launcher, not a bare `cluv` command. It initializes
+the remote git submodules and runs `uv sync --all-extras`, which upstream
+cluv's default sync does not do:
+
+```bash
+uv run scripts/cluv_prime_rl.py submit mila \
+  --time=4:00:00 \
+  -- rl @ examples/reverse_text/rl.toml
+```
+
+Keep Mila's configured A100L GPU type unless the replacement is Ampere or
+newer. An untyped GPU request can land on an RTX 8000, which is incompatible
+with FlashAttention.
+
+For a single-node run, do not include a config with `[slurm]`; cluv already
+owns that Slurm submission. For multi-node runs, synchronize and invoke
+prime-rl's launcher on the remote login node:
+
+```bash
+uv run scripts/cluv_prime_rl.py run mila -- \
+  --no-sync rl @ examples/multinode/rl.toml \
+  --output-dir cluv-results/my-run
+```
+
+`cluv run` resolves the remote directory from the local path relative to
+`$HOME` and ignores the cluster's `project_dir`, so it fails with `No such file
+or directory` on Mila, and from any git worktree. Run one-off remote commands
+(tests, dry runs) over ssh in the synced checkout instead, using a login shell
+so `uv` is on `PATH`:
+
+```bash
+ssh mila 'bash -lc "cd \$SCRATCH/Projects/prime-values && uv run --no-sync pytest -q tests/unit"'
+```
+
+On 2026-10-18, Mila jobs repeatedly failed at startup while reading the
+`.venv` on `/network/scratch`. Imports raised `FileNotFoundError` (or
+`ImportError: cannot open shared object file`) for files that existed,
+`inspect` raised `OSError: could not get source code`, and vLLM raised
+`OSError: [Errno 121] Remote I/O error` when closing a log file descriptor.
+It hit A100L nodes `cn-g028`/`cn-g029` and roughly one in three L40S job
+starts, on many different nodes (`cn-l001`, `cn-l017`, `cn-l038`, `cn-l040`,
+`cn-l052`). Runs that got past startup finished cleanly. If any of these errors
+shows up within the first minute of a job, check the file from the login node.
+If it is intact, resubmit (optionally `--exclude` the node) rather than
+rebuilding the environment.
+
+See `docs/cluv.md` for cluster overrides, result fetching, and the `first`
+cluster workflow. Before adding a cluster, use `cluv_prime_rl.py sh sacctmgr`
+and `cluv_prime_rl.py sh sinfo` as documented there; do not guess its account,
+partition, or GPU request syntax.
+
+Remote sync uses the project-specific `$SCRATCH/.cache/prime-values-uv` cache,
+not the shared home uv cache. If an interrupted cache entry fails installation
+with a missing wheel `METADATA` or `RECORD` file, clean only the named package
+from that cache and retry. Do not remove the whole cache or `.venv`.
+
+The Mila checkout is `$SCRATCH/Projects/prime-values` (`project_dir` in
+`pyproject.toml`), keeping its 16 GB `.venv` out of the 100 GB home quota. If a
+remote sync fails with `Disk quota exceeded`, check `disk-quota` on the login
+node and the `.venv` location before touching any cache. Note that `~/.cache`
+on Mila may be a symlink to scratch, so `du ~/.cache/*` does not measure home
+usage.
+
+Tamia compute nodes have no direct internet access; the cluster's cluv `env`
+exports its Squid proxy and a localhost `no_proxy`. If a Tamia job cannot reach
+Hugging Face, PyPI, or W&B, check that those variables reached the job before
+pre-downloading anything. The Tamia checkout is also on scratch, whose file
+quota (`diskusage_report`) is the binding limit: an install needs ~180K inodes.
+
+Harness programs and reward scripts such as `verify.py` run as uv scripts whose
+environments live in the shared `~/.cache/uv/environments-v2/`. The first
+rollouts that use a new script environment can fail with `FileNotFoundError`
+inside it while concurrent rollouts build it on a network filesystem. The
+failures stop once it is built, and later jobs reuse it. With a cold uv cache,
+run one job before launching a parallel sweep so concurrent jobs do not race
+on the same environment. Failures that persist mean a broken entry, which can
+be removed on its own.
+
+If cluv's local `git push` times out on `github.com` port 22, the local network
+is blocking SSH. Route git over port 443 for that command only:
+
+```bash
+GIT_SSH_COMMAND="ssh -o HostName=ssh.github.com -o Port=443 -o HostKeyAlias=github.com" \
+  uv run scripts/cluv_prime_rl.py submit mila ...
+```
+
+Mila's `main` QOS caps each user at 8 CPUs, 2 GPUs, and 48 GB; `sbatch` rejects
+larger requests with `QOSMaxCpuPerUserLimit`. Check limits with
+`sacctmgr -nP show qos format=Name,MaxTRESPU` rather than guessing. For 3-4 GPU
+runs under 3 hours use `--partition=short-unkillable`; for longer ones use
+`--partition=long`. A100L nodes have 4 GPUs, so a 4-GPU A100L request needs a
+whole node; check `sinfo -p <partition> -o "%G|%D|%t"` and switch to an idle
+H100 or L40S type when that starts sooner.
+
+`examples/value_function/rl.toml` needs one GPU per role (4 total). A short run:
+
+```bash
+uv run scripts/cluv_prime_rl.py submit mila \
+  --partition=short-unkillable --gpus-per-node=h100:4 \
+  --cpus-per-task=16 --mem=128G --time=1:00:00 \
+  -- rl @ examples/value_function/rl.toml
+```
+
+Every cluv `submit` and `sync` first rsyncs all remote run directories to the
+local `$SCRATCH/prime-values`. The launcher excludes `checkpoints/`,
+`broadcasts/`, and `weights/` from that fetch; inspect them on the cluster.
+
+Fir sync excludes `mooncake-transfer-engine` because its available wheel needs
+newer glibc than Fir provides. Non-Mooncake training and inference are
+supported; do not launch Mooncake-backed disaggregated inference on Fir.
+
 ## Summary
 
 | Command | Purpose | Typical use |

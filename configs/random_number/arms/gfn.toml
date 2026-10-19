@@ -1,0 +1,16 @@
+# Distribution matching (GFlowNet fine-tuning): sample completions in
+# proportion to the env's reward, exp(log R). Valid numbers share log R = 0 and
+# invalid completions get a length-scaled penalty, so the target is uniform over
+# numbers with about 2e-4 of its mass on invalid completions. The env never
+# returns less than e^-128 (a 5-token invalid completion); the floor sits below
+# that and only catches rollouts that failed with reward 0.
+
+[orchestrator.algo]
+type = "gfn"
+min_reward = 1e-60
+
+# The advantage's log π comes from the sampler, one update behind the trainer,
+# so large steps overshoot: at 2e-6 the policy reached uniform by step ~18, then
+# over-boosted the underweighted numbers and lost half its validity.
+[trainer.optim]
+lr = 5e-7

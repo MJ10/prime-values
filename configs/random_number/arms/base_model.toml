@@ -1,0 +1,10 @@
+# The untrained model's distribution: lr 0 keeps the weights fixed, so every
+# step samples the base policy.
+
+max_steps = 40
+
+[trainer.optim]
+lr = 0.0
+
+# Keeps the overlay loadable on its own (tests/unit/test_configs.py).
+[orchestrator]

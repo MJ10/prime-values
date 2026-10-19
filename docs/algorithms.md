@@ -67,6 +67,7 @@ type = "grpo"  # the default
 |---|---|---|---|
 | `grpo` | policy | `rl` on actions | Standard group-relative RL. |
 | `max_rl` | policy | `rl` on actions | MaxRL ([arXiv:2602.02710](https://arxiv.org/abs/2602.02710)): GRPO's centered reward normalized by the group **mean** instead of the standard deviation — the gradient is unbiased for the order-`group_size` truncation of the maximum-likelihood objective, upweighting hard examples like `1/p`. |
+| `gfn` | policy | `rl` on actions | GFlowNet fine-tuning ([arXiv:2310.04363](https://arxiv.org/abs/2310.04363)): samples completions **in proportion to** reward instead of maximizing it. The advantage is `log R(x) − log π(x)` centered by its group mean (on-policy trajectory balance with a group-mean `log Z`). Needs non-negative rewards, temperature-1 sampling, and `group_size >= 2`; zero rewards are floored at `min_reward`, which must sit far below `1 / V^max_completion_tokens` so zero-reward completions carry negligible target mass. |
 | `opd` | policy | `ref_kl` on actions | On-policy distillation ([Thinking Machines](https://thinkingmachines.ai/blog/on-policy-distillation/)): the policy samples, per-token reverse KL against a reference model as the gradient signal. Needs a `teacher`. |
 | `sft` | *(the teacher)* | `ce` on actions | Hard distillation: a frozen model generates rollouts, the policy trains with CE on its tokens. Needs a frozen `sampling.source` (the teacher it samples from). |
 | `opsd` | policy | `ref_kl` on actions | SDFT ([arXiv:2601.19897](https://arxiv.org/abs/2601.19897)): the model is its own reference, conditioned on an expert demonstration. The teacher *is* the live policy (the paper's setting, no extra deployment) — no model to configure. |
@@ -133,6 +134,7 @@ At runtime, each env's resolved config builds two objects: a `Sampler` (`prime_r
 | `grpo` | `GRPOAlgorithm` | `score_group`: group-norm credit (optional length penalty) |
 | `echo` | `EchoAlgorithm` | `score_rollout`: weighted ce on observation tokens; `score_group`: group-norm credit (inherited) |
 | `max_rl` | `MaxRLAlgorithm` | `score_group`: mean-normalized group credit |
+| `gfn` | `GFNAlgorithm` | `score_group`: group-centered `log R − log π` |
 | `opd` | `OPDAlgorithm` | `score_rollout`: own-context prefill under the teacher |
 | `opsd` | `OPSDAlgorithm` | `score_rollout`: demo-conditioned prefill under the live policy |
 | `sft` | `SFTDistillAlgorithm` | `score_group`: group-norm credit (feeds filters) |
@@ -169,7 +171,7 @@ $$
 \mathcal{L} = \frac{\sum \mathcal{L}_{rl}}{N_{rl}} + \frac{\sum \mathcal{L}_{ce}}{N_{ce}} + \frac{\sum \mathcal{L}_{ref\_kl}}{N_{ref\_kl}}
 $$
 
-- `rl` — the configured RL loss (`[trainer.loss]`): DPPO + KL by default, or a [custom loss](#custom-loss). Fed by the group-relative algorithms (`grpo`, `max_rl`, and `echo`'s action tokens).
+- `rl` — the configured RL loss (`[trainer.loss]`): DPPO + KL by default, or a [custom loss](#custom-loss). Fed by the group-relative algorithms (`grpo`, `max_rl`, `gfn`, and `echo`'s action tokens).
 - `ce` — masked NLL. Used for frozen-model tokens (`sft`) and env-observation tokens (`echo`).
 - `ref_kl` — the per-token reverse KL to a reference model ($\log \pi_{\text{ref}} - \log \pi$) as the policy-gradient signal, importance-ratio corrected with a one-sided trust region (`opd`, `opsd`). Requires `ref_logprobs` from a [reference scoring](#reference-scoring); the scoring model must be a vLLM server (it's the only one that exposes `prompt_logprobs`).
 
@@ -271,6 +273,7 @@ The per-token training signal is set by `algo.type` and the [algorithm](#the-alg
 |---|---|---|
 | `grpo` | `rl` | Configurable group or value-function baseline, with an optional length penalty for group-only credit. |
 | `max_rl` | `rl` | Mean-normalized group credit (maximum-likelihood RL). |
+| `gfn` | `rl` | Group-centered `log R − log π` credit (distribution matching, `π ∝ R`). |
 | `echo` | `rl` + `ce` | Group-norm on action tokens, plus weighted CE on env-provided tokens selected by message role (each role's `alpha` is its ECHO λ), optionally narrowed by a user filter. |
 | `opd` | `ref_kl` | On-policy distillation: per-token reverse KL to a reference model (`model`, an inline frozen hosted model), evaluated in the trainer from shipped reference logprobs. No credit — rollouts keep `advantages = None` (advantage-based filters never fire) and ship no advantage stream; `group_size` only fans out sampling. |
 | `opsd` | `ref_kl` | SDFT: per-token reverse KL to a demo-conditioned reference. No credit — rollouts keep `advantages = None` (advantage-based filters never fire) and ship no advantage stream. |

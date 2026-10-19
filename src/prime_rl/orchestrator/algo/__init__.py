@@ -5,7 +5,7 @@ is — a bundle of sampling and the per-token training signal. This package
 turns the signal half into runtime objects (the sampling half is the env's
 :class:`~prime_rl.orchestrator.sampler.Sampler`):
 
-- one module per algorithm (``grpo``, ``echo``, ``max_rl``, ``opd``,
+- one module per algorithm (``grpo``, ``echo``, ``max_rl``, ``gfn``, ``opd``,
   ``opsd``, ``sft``) — each named class owns its scoring hooks
   (``score_rollout`` / ``score_group``) and declares what it needs (loss
   component, a "teacher", ...). One instance per env, built by
@@ -32,6 +32,7 @@ from typing import TYPE_CHECKING
 from prime_rl.configs.algorithm import GRPOAlgoConfig
 from prime_rl.orchestrator.algo.base import Algorithm, connect_frozen_pool
 from prime_rl.orchestrator.algo.echo import EchoAlgorithm
+from prime_rl.orchestrator.algo.gfn import GFNAlgorithm
 from prime_rl.orchestrator.algo.grpo import GRPOAlgorithm
 from prime_rl.orchestrator.algo.max_rl import MaxRLAlgorithm
 from prime_rl.orchestrator.algo.opd import OPDAlgorithm
@@ -52,6 +53,7 @@ ALGORITHM_CLASSES: dict[str, type[Algorithm]] = {
     "grpo": GRPOAlgorithm,
     "echo": EchoAlgorithm,
     "max_rl": MaxRLAlgorithm,
+    "gfn": GFNAlgorithm,
     "opd": OPDAlgorithm,
     "opsd": OPSDAlgorithm,
     "sft": SFTDistillAlgorithm,
@@ -87,6 +89,7 @@ def build_algorithm(
 __all__ = [
     "Algorithm",
     "EchoAlgorithm",
+    "GFNAlgorithm",
     "GRPOAlgorithm",
     "MaxRLAlgorithm",
     "OPDAlgorithm",
