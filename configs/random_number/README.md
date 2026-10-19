@@ -190,3 +190,18 @@ reverse-KL training gets no signal toward a mode it does not sample. Leaving
 out one of 101 numbers costs `log(101/100) ≈ 0.0100` in KL, which is most of
 the 0.0113. The paper's GPT-J writes every number as one token, and its reward
 leaves out 100.
+
+Spelling out that 100 is included barely helps. Over 512k base-model samples
+per wording (counts in `results/prompts/`, drawn with
+`random_number_sample.py --prompt-file`):
+
+| Prompt ending | Valid | KL | 100 vs uniform | 95–99 vs uniform | P(100)/P(10) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| "between 0 and 100: " (env) | 70.4% | 0.53 | 0.038 | 0.17 | 0.065 |
+| "between 0 and 100 (inclusive): " | 51.5% | 0.39 | 0.088 | 0.30 | 0.075 |
+| "from 0 to 100, inclusive: " | 76.8% | 0.39 | 0.054 | 0.23 | 0.084 |
+| "from {0, 1, 2, ..., 100}: " | 79.7% | 0.24 | 0.060 | 0.42 | 0.061 |
+
+Under every wording, 100 stays 3–7× below its neighbours. P(100)/P(10) stays
+at 0.06–0.08: once the model has written `1`,`0`, it rarely adds a third digit,
+whatever the prompt says about the range.
