@@ -28,12 +28,20 @@ def main() -> None:
     parser.add_argument("model", help="Hugging Face model name or a run's weights/step_<n> directory")
     parser.add_argument("--num-samples", type=int, default=512_000)
     parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--out", type=Path, default=Path(os.environ.get("PRIME_RL_CLUV_OUTPUT_DIR", ".")) / "numbers.json")
+    parser.add_argument(
+        "--prompt-file",
+        type=Path,
+        help="read the prompt verbatim from this file instead of the env's PROMPT (to compare wordings)",
+    )
+    parser.add_argument(
+        "--out", type=Path, default=Path(os.environ.get("PRIME_RL_CLUV_OUTPUT_DIR", ".")) / "numbers.json"
+    )
     args = parser.parse_args()
 
     llm = LLM(model=args.model, seed=args.seed, enable_prefix_caching=True)
     tokenizer = llm.get_tokenizer()
-    prompt_ids = tokenizer.encode(PROMPT.format(low=LOW, high=HIGH))
+    prompt = args.prompt_file.read_text() if args.prompt_file else PROMPT.format(low=LOW, high=HIGH)
+    prompt_ids = tokenizer.encode(prompt)
     # Every knob explicit, so nothing falls back to the model's generation_config.json.
     params = SamplingParams(
         temperature=1.0,
@@ -65,7 +73,16 @@ def main() -> None:
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(
-        json.dumps({"model": args.model, "samples": args.num_samples, "invalid": invalid, "low": LOW, "counts": counts})
+        json.dumps(
+            {
+                "model": args.model,
+                "prompt": prompt,
+                "samples": args.num_samples,
+                "invalid": invalid,
+                "low": LOW,
+                "counts": counts,
+            }
+        )
     )
     print(f"Wrote {args.out}")
 
