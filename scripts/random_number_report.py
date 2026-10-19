@@ -31,7 +31,9 @@ def load_numbers(run_dir: Path) -> dict[int, list[int]]:
     for path in run_dir.glob("*/rollouts/step_*/train_rollouts.jsonl"):
         step = int(path.parent.name.removeprefix("step_"))
         with path.open() as f:
-            steps[step] = [int(json.loads(line)["metrics"]["number"]) for line in f]
+            records = [json.loads(line) for line in f]
+        # Rollouts cancelled before scoring (e.g. off-policy cancels) carry no metrics.
+        steps[step] = [int(r["metrics"]["number"]) for r in records if "number" in r["metrics"]]
     if not steps:
         raise FileNotFoundError(f"no train rollouts under {run_dir}/*/rollouts")
     return steps

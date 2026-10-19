@@ -169,15 +169,17 @@ so `uv` is on `PATH`:
 ssh mila 'bash -lc "cd \$SCRATCH/Projects/prime-values && uv run --no-sync pytest -q tests/unit"'
 ```
 
-On 2026-10-18, single-node jobs on Mila A100L nodes `cn-g028` and `cn-g029`
-failed at startup in two ways. Imports raised `FileNotFoundError` for `.venv`
-files that existed, and vLLM raised `OSError: [Errno 121] Remote I/O error`
-when closing a log file descriptor on `/network/scratch`. The same commit ran
-cleanly on most L40S nodes. The same day, though, L40S nodes `cn-l038` and
-`cn-l052` hit the `FileNotFoundError`, and `cn-l040` failed with
-`OSError: could not get source code` (an unreadable `.py` file). If any of
-these errors shows up, check the files from the login node first. If they are intact, resubmit with another GPU type (or
-`--exclude` the node) rather than rebuilding the environment.
+On 2026-10-18, Mila jobs repeatedly failed at startup while reading the
+`.venv` on `/network/scratch`. Imports raised `FileNotFoundError` (or
+`ImportError: cannot open shared object file`) for files that existed,
+`inspect` raised `OSError: could not get source code`, and vLLM raised
+`OSError: [Errno 121] Remote I/O error` when closing a log file descriptor.
+It hit A100L nodes `cn-g028`/`cn-g029` and roughly one in three L40S job
+starts, on many different nodes (`cn-l001`, `cn-l017`, `cn-l038`, `cn-l040`,
+`cn-l052`). Runs that got past startup finished cleanly. If any of these errors
+shows up within the first minute of a job, check the file from the login node.
+If it is intact, resubmit (optionally `--exclude` the node) rather than
+rebuilding the environment.
 
 See `docs/cluv.md` for cluster overrides, result fetching, and the `first`
 cluster workflow. Before adding a cluster, use `cluv_prime_rl.py sh sacctmgr`

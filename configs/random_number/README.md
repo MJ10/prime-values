@@ -167,3 +167,26 @@ uv run scripts/cluv_prime_rl.py submit mila --gpus-per-node=l40s:1 --time=1:00:0
 Each job writes `numbers.json` to its own run directory. After a sync, pass
 those files to the report as `label=.../numbers.json`; it pools all of their
 samples instead of the last 10 steps.
+
+## Results
+
+`results/` holds the 512k-sample counts (`numbers_<arm>.json`), Figure 2
+(`histograms_512k.png`), per-step training curves (`curves.png`), and both
+summary tables. These come from Mila jobs `base_model` 11307367, `grpo`
+11307531, `value` 11307584 and `gfn` 11307420, with the 512k samples drawn
+from each run's `weights/step_300`:
+
+| Arm | Valid | KL to uniform | KL over 0–99 | Distinct |
+| --- | ---: | ---: | ---: | ---: |
+| base | 70.4% | 0.531 | 0.522 | 101/101 |
+| `grpo` | 100.0% | 2.706 | — | 96/101 |
+| `value` | 100.0% | 1.039 | — | 100/101 |
+| `gfn` | 99.99% | 0.0113 | 0.0014 | 100/101 |
+
+`gfn` matches uniform to within ±14% on every number from 0 to 99. It never
+samples 100. The base model says 100 at 1/26 of the uniform rate. Qwen writes
+100 as `1`,`0`,`0`, so it shares the prefix `10` with 10, and on-policy
+reverse-KL training gets no signal toward a mode it does not sample. Leaving
+out one of 101 numbers costs `log(101/100) ≈ 0.0100` in KL, which is most of
+the 0.0113. The paper's GPT-J writes every number as one token, and its reward
+leaves out 100.
