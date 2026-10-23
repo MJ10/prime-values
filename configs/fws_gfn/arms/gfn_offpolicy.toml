@@ -1,0 +1,22 @@
+# gfn (see gfn.toml) plus one off-policy trajectory per group: FwS's own boosted
+# trace for that problem (math_data/sampling_traces_math_qwen.jsonl, restricted to
+# the 7961 problems in train.parquet and labelled with the same math-verify reward).
+# This gives gfn the same extra information FwS's SFT consumes. Trajectory balance
+# is valid off-policy: centering the mixed group by its mean is the log-variance
+# (VarGrad) gradient, which has the same minimizer, p_C.
+# Build the JSONL with scripts/fws/offpolicy_traces.py.
+
+[orchestrator]
+batch_size = 576 # 64 groups x (8 on-policy + 1 off-policy)
+
+[orchestrator.algo]
+type = "gfn"
+min_reward = 1e-4
+off_policy_path = "$SCRATCH/fws/offpolicy_boosted.jsonl"
+
+[orchestrator.algo.prior]
+name = "Qwen/Qwen2.5-3B"
+base_url = ["http://localhost:8001/v1"]
+
+[trainer.optim]
+lr = 1e-7

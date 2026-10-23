@@ -1,0 +1,53 @@
+# Shared setup for the GFlowNet vs Finetuning-with-Sampling (arXiv:2610.02140) math
+# comparison. Compose with exactly one arm overlay:
+#   uv run rl @ configs/fws_gfn/base.toml @ configs/fws_gfn/arms/<arm>.toml
+# gfn arms need the frozen prior server; launch them through scripts/fws/rl_with_prior.sh.
+
+# 250 steps x 64 prompts = 16,000 prompt visits, about 2 epochs over the 7962 training
+# problems: the same data budget as FwS's 2-epoch SFT.
+max_steps = 250
+# Longest prompt is ~700 tokens, plus FwS's 1856-token generation cap.
+seq_len = 2600
+
+[model]
+# Base model, not instruct, as in FwS. Its tokenizer's chat template (with Qwen's
+# default system prompt) is what FwS evaluates with.
+name = "Qwen/Qwen2.5-3B"
+
+[wandb]
+project = "fws-gfn"
+
+# Resume after a requeue; keep steps 125 and 250 for evaluation.
+[ckpt]
+interval = 50
+resume_step = -1
+keep_last = 1
+keep_interval = 125
+
+[orchestrator]
+batch_size = 512 # 64 prompts x 8 rollouts
+group_size = 8
+
+# Temperature 1, so sampling logprobs are the policy's own (gfn needs it; grpo uses
+# the same). The cap and EOS stop match FwS's eval generation, so the training
+# sample space is the eval's.
+[orchestrator.train.sampling]
+temperature = 1.0
+max_completion_tokens = 1856
+
+[[orchestrator.train.env]]
+id = "fws-math"
+args = { data_path = "$SCRATCH/fws/finetuning-with-sampling/math_data/train.parquet" }
+
+[trainer.optim]
+lr = 1e-6
+
+[inference]
+# Leaves room on the inference GPU for the gfn arms' frozen prior server.
+gpu_memory_utilization = 0.55
+
+[deployment]
+type = "single_node"
+gpus_per_node = 2
+num_infer_gpus = 1
+num_train_gpus = 1

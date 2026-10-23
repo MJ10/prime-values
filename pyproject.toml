@@ -82,6 +82,7 @@ envs = [
     "deepdive-v1",
     "deepwiki-v1",
     "forth-lang-v1",
+    "fws-math",
     "general-agent-v1",
     "glossary-v1",
     "gpqa-v1",
@@ -268,6 +269,7 @@ ifeval-v1 = { path = "deps/research-environments/environments/ifeval_v1", editab
 lean-v1 = { path = "deps/research-environments/environments/lean_v1", editable = true }
 livecodebench-v1 = { path = "deps/research-environments/environments/livecodebench_v1", editable = true }
 logic-env = { path = "deps/research-environments/environments/logic_env", editable = true }
+fws-math = { path = "environments/fws_math", editable = true }
 longcot-mini-v1 = { path = "deps/research-environments/environments/longcot_mini_v1", editable = true }
 longcot-v1 = { path = "deps/research-environments/environments/longcot_v1", editable = true }
 longpdfs-v1 = { path = "deps/research-environments/environments/longpdfs_v1", editable = true }

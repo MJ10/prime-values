@@ -240,6 +240,24 @@ def test_gfn_centers_log_reward_minus_sequence_logprob():
     assert [_scalar(rollout) for rollout in group] == pytest.approx([r - mean for r in log_ratios])
 
 
+def test_gfn_prior_adds_prior_sequence_logprob_to_log_reward():
+    group = _make_group(rewards=[1.0, 0.0, 1.0], completion_lengths=[2, 1, 1])
+    for rollout, token_logprob, token_prior in zip(group, [-0.5, -2.0, -3.0], [-1.0, -2.0, -2.5]):
+        for sample in rollout.samples:
+            sample.logprobs = [token_logprob if trainable else 0.0 for trainable in sample.mask]
+            sample.ref_logprobs = [token_prior if trainable else 0.0 for trainable in sample.mask]
+    algo = GFNAlgorithm(GFNAlgoConfig(min_reward=1e-2), policy_pool=None)
+    algo.prior_pool = object()  # score_group only reads the prefill-scored ref_logprobs
+    asyncio.run(algo.score_group(group))
+
+    # log p_prior + log max(r, 1e-2) - log pi: (-2 + 0 + 1), (-2 + log 1e-2 + 2), (-2.5 + 0 + 3)
+    log_ratios = [-1.0, math.log(1e-2), 0.5]
+    mean = sum(log_ratios) / 3
+    assert [_scalar(rollout) for rollout in group] == pytest.approx([r - mean for r in log_ratios])
+    assert all(sample.ref_logprobs is None for rollout in group for sample in rollout.samples)
+    assert algo.metrics()["gfn/log_prior_ratio"] == pytest.approx((-1.0 + 0.0 + 0.5) / 3)
+
+
 # --------------------------------------------------------------------------
 # GRPO linear length penalty: pass_rate-scaled penalty before the baseline.
 # --------------------------------------------------------------------------

@@ -1,0 +1,19 @@
+[project]
+name = "fws-math"
+version = "0.1.0"
+tags = ["math", "single-turn", "distribution-matching"]
+license = "Apache-2.0"
+description = "MATH Levels 3-5 in the Finetuning-with-Sampling setup (arXiv:2610.02140): their prompt, split and gold answers, scored with math-verify."
+dependencies = [
+    "verifiers>=0.1.9",
+    "datasets",
+    "pandas",
+    "pyarrow",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = ["fws_math.py"]
