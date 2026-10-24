@@ -152,12 +152,9 @@ and the KLs at temperature 1, in nats over problems the base model solves.
 | Sampling SFT (FwS Table 1) | 0.495 | 0.277 | 0.582 | 0.782 | | | | |
 | Sampling SFT + RL (FwS Table 1) | 0.545 | 0.241 | 0.652 | 0.830 | | | | |
 | **Base, reproduced** | **0.462** | **0.193** | **0.522** | **0.652** | 0.439 | 0.888 | 4.6 | 1.4 |
-| SFT on expert solutions (fp32, lr 5e-5) | 0.154 | 0.060 | 0.166 | 0.352 | 0.149 | 0.646 | 104 | 331 |
-| Sampling SFT, clean traces (fp32, lr 5e-5) | 0.205 | 0.048 | 0.236 | 0.494 | 0.200 | 0.682 | 89 | 176 |
-| Sampling SFT, released traces (fp32, lr 5e-5) | 0.171 | 0.036 | 0.232 | 0.458 | 0.178 | 0.662 | 93 | 176 |
 
-Pending: GRPO, gfn, gfn_offpolicy, and Sampling SFT with bf16 weights and at
-lr 1e-5 and 5e-6.
+Pending: grpo and the SFT reproductions (trained, being evaluated), and gfn
+and gfn_offpolicy (training).
 
 ### Caveats
 
@@ -169,10 +166,14 @@ lr 1e-5 and 5e-6.
   by the gap.
 - **MATH500 contamination.** Their released Sampling-SFT data includes 268
   of the 500 MATH500 problems.
+- **Checkpoint configs.** Checkpoints are written by transformers 5, which
+  moved `rope_theta` into `rope_parameters`. FwS's eval venv (transformers
+  4.57) silently reads such a config with RoPE base 1e4 instead of Qwen's
+  1e6, so `scripts/fws/eval_model.sh` evaluates every checkpoint with the base
+  model's config and tokenizer files. Training is unaffected.
 - **SFT precision.** FwS's verl SFT (`model_dtype=bf16`) updates bf16
   weights with no fp32 master copy, so at lr 5e-5 many updates round away.
-  prime-rl keeps fp32 master weights, and the same lr overfits (loss
-  0.16 → 0.085) and degrades every benchmark. The `sft/bf16.toml` overlay
+  prime-rl keeps fp32 master weights. The `sft/bf16.toml` overlay
   matches their precision for the Sampling-SFT reproduction only; every
   other arm uses the default fp32 optimization dtype. The fp32 lr sweep is
   kept as a cross-check.
