@@ -20,7 +20,9 @@ if [[ -d "$model" ]]; then
     eval_dir="$out/model"
     mkdir -p "$eval_dir"
     for file in "$model"/*.safetensors "$model"/model.safetensors.index.json "$model"/config.json; do
-        [[ -e "$file" ]] && ln -sfn "$file" "$eval_dir/"
+        if [[ -e "$file" ]]; then
+            ln -sfn "$file" "$eval_dir/"
+        fi
     done
     for file in tokenizer.json tokenizer_config.json vocab.json merges.txt generation_config.json; do
         cp -L "$base_dir/$file" "$eval_dir/"
