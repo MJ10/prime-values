@@ -97,26 +97,30 @@ which is valid for any behavior distribution with the same minimizer.
 
 ## Launch
 
+The runs used Rorqual. Its compute nodes cannot reach Hugging Face, so
+download the model on the login node first. Prepare the data there too:
+
 ```bash
-bash scripts/fws/setup_eval.sh "$SCRATCH/fws"     # on the login node
+bash scripts/fws/setup_eval.sh "$SCRATCH/fws"
 uv run python scripts/fws/offpolicy_traces.py "$SCRATCH/fws/finetuning-with-sampling" "$SCRATCH/fws/offpolicy_boosted.jsonl"
 uv run python scripts/fws/sft_data.py "$SCRATCH/fws/finetuning-with-sampling" "$SCRATCH/fws/sft"
 ```
 
-On Fir, home is full, so jobs get `HF_HOME` on scratch (pre-download the
-model on the login node):
-
 ```bash
-uv run scripts/cluv_prime_rl.py submit fir --time=8:00:00 \
-  --export=ALL,HF_HOME=/scratch/mjain/hf,HF_HUB_OFFLINE=1 \
+uv run scripts/cluv_prime_rl.py submit rorqual --time=12:00:00 \
   -- bash scripts/fws/rl_with_prior.sh @ configs/fws_gfn/base.toml @ configs/fws_gfn/arms/gfn.toml --wandb.name gfn
-uv run scripts/cluv_prime_rl.py submit fir --time=8:00:00 \
-  --export=ALL,HF_HOME=/scratch/mjain/hf,HF_HUB_OFFLINE=1 \
+uv run scripts/cluv_prime_rl.py submit rorqual --time=12:00:00 \
   -- rl @ configs/fws_gfn/base.toml @ configs/fws_gfn/arms/grpo.toml --wandb.name grpo
-uv run scripts/cluv_prime_rl.py submit fir --time=4:00:00 \
-  --export=ALL,HF_HOME=/scratch/mjain/hf,HF_HUB_OFFLINE=1 \
-  -- sft @ configs/fws_gfn/sft/base.toml @ configs/fws_gfn/sft/boosted_clean.toml --wandb.name sft-boosted-clean
+uv run scripts/cluv_prime_rl.py submit rorqual --time=3:00:00 \
+  -- sft @ configs/fws_gfn/sft/base.toml @ configs/fws_gfn/sft/boosted_clean.toml @ configs/fws_gfn/sft/bf16.toml
+uv run scripts/cluv_prime_rl.py submit rorqual --time=4:00:00 \
+  -- bash scripts/fws/eval_model.sh <scratch>/fws <run>/weights/step_<N> <out> <scratch>/fws/results/base/suite
 ```
+
+Pass cluster paths literally: cluv does not expand `$SCRATCH` in program
+arguments. Pass scripts, never inline `bash -c`, because cluv's remote
+quoting mangles inline shell. Jobs hang in W&B's final upload on Rorqual;
+cancel them once `weights/step_<N>/STABLE` exists.
 
 ## Evaluation
 
@@ -131,3 +135,51 @@ uv run scripts/cluv_prime_rl.py submit fir --time=4:00:00 \
     model's own samples);
   - `KL(p_C ‖ π)` (the base model's correct samples are exact samples of
     `p_C`).
+
+## Results
+
+All numbers are single-shot accuracy from FwS's own `eval_math.py` and
+`eval_ood_math.py` (temperature 0.6, 1856 tokens), unless a column says
+otherwise. FwS's numbers are their Table 1. Sampler columns are on
+MATH(3,4,5) with FwS's grader: mean accuracy over 64 samples at 0.6, pass@64,
+and the KLs at temperature 1, in nats over problems the base model solves.
+
+| Model | MATH(3,4,5) | AMC | MATH500 | GSM8K | mean@64 | pass@64 | KL(π‖p_C) | KL(p_C‖π) |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Base (FwS Table 1) | 0.315 | 0.133 | 0.245 | 0.579 | | | | |
+| SFT (FwS Table 1) | 0.243 | 0.100 | 0.168 | 0.455 | | | | |
+| GRPO (FwS Table 1) | 0.457 | 0.249 | 0.313 | 0.808 | | | | |
+| Sampling SFT (FwS Table 1) | 0.495 | 0.277 | 0.582 | 0.782 | | | | |
+| Sampling SFT + RL (FwS Table 1) | 0.545 | 0.241 | 0.652 | 0.830 | | | | |
+| **Base, reproduced** | **0.462** | **0.193** | **0.522** | **0.652** | 0.439 | 0.888 | 4.6 | 1.4 |
+| SFT on expert solutions (fp32, lr 5e-5) | 0.154 | 0.060 | 0.166 | 0.352 | 0.149 | 0.646 | 104 | 331 |
+| Sampling SFT, clean traces (fp32, lr 5e-5) | 0.205 | 0.048 | 0.236 | 0.494 | 0.200 | 0.682 | 89 | 176 |
+| Sampling SFT, released traces (fp32, lr 5e-5) | 0.171 | 0.036 | 0.232 | 0.458 | 0.178 | 0.662 | 93 | 176 |
+
+Pending: GRPO, gfn, gfn_offpolicy, and Sampling SFT with bf16 weights and at
+lr 1e-5 and 5e-6.
+
+### Caveats
+
+- **Base model.** With their eval script, environment pins and grader, base
+  Qwen2.5-3B scores 0.462 on MATH(3,4,5), not 0.315, and is higher on every
+  column. math-verify agrees with their grader on 99.3% of the 1024
+  problems. Without the chat template it still scores 0.423 (4 samples at
+  0.6). The gap is unexplained, so gains over their base row are overstated
+  by the gap.
+- **MATH500 contamination.** Their released Sampling-SFT data includes 268
+  of the 500 MATH500 problems.
+- **SFT precision.** FwS's verl SFT (`model_dtype=bf16`) updates bf16
+  weights with no fp32 master copy, so at lr 5e-5 many updates round away.
+  prime-rl keeps fp32 master weights, and the same lr overfits (loss
+  0.16 → 0.085) and degrades every benchmark. The `sft/bf16.toml` overlay
+  matches their precision for the Sampling-SFT reproduction only; every
+  other arm uses the default fp32 optimization dtype. The fp32 lr sweep is
+  kept as a cross-check.
+- **SFT batching.** prime-rl packs SFT samples into 2048-token rows, so a step
+  holds about 16 samples' worth of tokens rather than exactly 16 samples.
+- **Learning rate.** `gfn` uses grpo's lr (1e-6). Adam normalizes gradient
+  scale, so the larger advantage scale does not change the step size.
+- **Empty completions.** Rollouts that end immediately with EOS are dropped
+  as errors by verifiers, so they are excluded from gfn's sample space. This
+  is rare.
