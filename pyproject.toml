@@ -380,6 +380,7 @@ partition = "gpubase_bynode_b2"
 gpus-per-node = "h100:4"
 
 [tool.cluv.clusters.fir]
+project_dir = "$HOME/Projects/prime-values"
 sbatch_args = [
     { account = "rrg-bengioy-ad_gpu", partition = "gpubase_bygpu_b2", gpus-per-node = "h100:2" },
     { account = "def-bengioy_gpu", partition = "gpubase_bygpu_b2", gpus-per-node = "h100:2" },
