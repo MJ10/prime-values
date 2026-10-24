@@ -1,0 +1,9 @@
+# FwS's "SFT" row: the 7962 expert solutions of train.parquet. Samples average 396
+# tokens with their prompt, so 4 packed rows hold about 20 samples (the nearest even
+# row count to 16 samples); 2 epochs at 16 samples per step is 995 steps.
+max_steps = 995
+
+[data]
+# Fir path ($SCRATCH is not expanded here); override with --data.name elsewhere.
+name = "/scratch/mjain/fws/sft/expert"
+batch_size = 4
