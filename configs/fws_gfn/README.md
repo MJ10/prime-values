@@ -61,6 +61,8 @@ run, in a separate venv):
 
 - **Env** `fws-math` (`environments/fws_math`): `train.parquet`, their prompt,
   gold = last boxed answer of the expert solution (as `boost_math.py` does).
+  Two solutions write `\boxed 2` without braces; FwS's parser cannot read
+  them either, so they are dropped (7960 problems).
   The prompt tokens are identical to FwS's `apply_chat_template` call. The
   reward is math-verify on the last `\boxed{}`. On the 7961 released traces
   math-verify marks 95.28% correct against FwS's label of 95.35%.
@@ -68,7 +70,7 @@ run, in a separate venv):
   space as FwS's eval generations, so the target is defined over what is
   evaluated.
 - **Budget.** 250 steps × 64 prompts × 8 rollouts. That is 16,000 prompt
-  visits (~2 epochs of 7962, matching FwS's 2-epoch SFT) and 128,000
+  visits (~2 epochs of 7960, matching FwS's 2-epoch SFT) and 128,000
   sampled traces. Full fine-tuning, 1 inference + 1 trainer H100.
 
 ## Arms

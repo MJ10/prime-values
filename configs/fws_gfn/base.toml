@@ -3,7 +3,7 @@
 #   uv run rl @ configs/fws_gfn/base.toml @ configs/fws_gfn/arms/<arm>.toml
 # gfn arms need the frozen prior server; launch them through scripts/fws/rl_with_prior.sh.
 
-# 250 steps x 64 prompts = 16,000 prompt visits, about 2 epochs over the 7962 training
+# 250 steps x 64 prompts = 16,000 prompt visits, about 2 epochs over the 7960 training
 # problems: the same data budget as FwS's 2-epoch SFT.
 max_steps = 250
 # Longest prompt is ~700 tokens, plus FwS's 1856-token generation cap.

@@ -43,13 +43,14 @@ def load_environment(data_path: str, math_verify_timeout: int = 5) -> vf.Environ
 
     The prompt is FwS's, sent as a single user turn so Qwen's chat template supplies the
     same default system prompt as their ``apply_chat_template`` call. The gold answer is
-    the last boxed expression of the expert solution, as in ``boost_math.py``. The reward
-    is math-verify on the completion's last ``\\boxed{}`` (1 correct, 0 otherwise); FwS
-    grades with a sympy-based checker instead, so the two can disagree on edge cases.
+    the last boxed expression of the expert solution, as in ``boost_math.py``; the 2
+    solutions written as ``\\boxed 2`` (no braces), which FwS's parser also cannot read,
+    are dropped, leaving 7960 problems. The reward is math-verify on the completion's
+    last ``\\boxed{}`` (1 correct, 0 otherwise); FwS grades with a sympy-based checker
+    instead, so the two can disagree on edge cases.
     Environment variables in ``data_path`` (e.g. ``$SCRATCH``) are expanded."""
     frame = pd.read_parquet(os.path.expandvars(data_path))
-    answers = [last_boxed(solution) for solution in frame["solution"]]
-    if any(answer is None for answer in answers):
-        raise ValueError(f"{sum(a is None for a in answers)} expert solutions in {data_path} have no boxed answer")
-    dataset = Dataset.from_dict({"question": [build_question(p) for p in frame["problem"]], "answer": answers})
+    pairs = [(problem, last_boxed(solution)) for problem, solution in zip(frame["problem"], frame["solution"])]
+    pairs = [(problem, answer) for problem, answer in pairs if answer is not None]
+    dataset = Dataset.from_dict({"question": [build_question(p) for p, _ in pairs], "answer": [a for _, a in pairs]})
     return vf.SingleTurnEnv(dataset=dataset, rubric=vf.MathRubric(timeout_seconds=math_verify_timeout))
