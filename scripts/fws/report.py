@@ -81,6 +81,9 @@ def summarize(suite: str, base_suite: str | None, eps: float) -> dict:
             ]
             forward_kl.append(mean([base - model for base, model in pairs]) - log_z[idx])
         out["forward_kl_from_pC"] = mean(forward_kl)
+    elif os.path.samefile(suite, base_suite):
+        # π is the base model, so KL(p_C || π) = -log Z_q exactly.
+        out["forward_kl_from_pC"] = mean([-log_z[idx] for idx in solved])
     out["num_problems_solved_by_base_t1"] = len(solved)
     return out
 
