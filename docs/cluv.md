@@ -91,7 +91,9 @@ Trillium's GPU nodes form their own Slurm cluster, so GPU jobs go through the
 `trillium-gpu` login node; the `trillium` CPU login node cannot submit them.
 Trillium allocates either one GPU or whole 4× H100 nodes, routes jobs to its
 partitions itself, rejects `--mem`, and accepts up to 24 hours. Use
-`--partition=debug` for jobs of up to two hours that should start quickly. Its
+`--partition=debug` for jobs of up to two hours that should start quickly. Debug
+accepts one job per user, so Slurm rejects the second account's submission with
+`QOSMaxSubmitJobPerUserLimit` and cluv keeps the other. Its
 `sbatch` defaults to `--export=NONE`, so the cluster's `sbatch_args` set
 `export = "ALL"` to pass cluv's job environment through. Trillium compute nodes
 have no internet access and mount `$HOME` read-only. Its `env` table moves

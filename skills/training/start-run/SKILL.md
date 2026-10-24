@@ -263,7 +263,8 @@ Trillium GPU jobs must be submitted from the `trillium-gpu` login node (the
 cluv cluster name); the `trillium` CPU login node belongs to a different Slurm
 cluster. Trillium `sbatch` rejects `--mem`, accepts 1 or a multiple of 4 GPUs,
 and picks the partition itself; `--partition=debug` (up to 2 hours) starts
-quickly for smoke tests. Its `sbatch` wrapper adds `--export=NONE`, so the
+quickly for smoke tests; it allows one job per user, so one of cluv's two
+account submissions fails with `QOSMaxSubmitJobPerUserLimit`, which is harmless. Its `sbatch` wrapper adds `--export=NONE`, so the
 cluster's `sbatch_args` set `export = "ALL"`; without it, the job script exits
 because `SBATCH_OUTPUT` is missing. Compute nodes have no internet and mount
 `$HOME` read-only, so its `env` moves `XDG_CACHE_HOME` and `TRITON_CACHE_DIR`
