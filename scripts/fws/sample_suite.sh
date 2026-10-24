@@ -14,7 +14,7 @@ out=${3:?}
 base_out=${4:-}
 base_model=${FWS_BASE_MODEL:-Qwen/Qwen2.5-3B}
 repo="$root/finetuning-with-sampling"
-python="$root/eval-venv/bin/python"
+python=${FWS_PYTHON:-$root/eval-venv/bin/python}
 tool="$(cd "$(dirname "$0")" && pwd)/sample_eval.py"
 export VLLM_WORKER_MULTIPROC_METHOD=spawn VLLM_USE_FLASHINFER_SAMPLER=0
 mkdir -p "$out"

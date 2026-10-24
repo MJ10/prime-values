@@ -10,7 +10,7 @@ root=${1:?usage: eval_fws.sh <fws_dir> <model> <out_dir>}
 model=${2:?}
 out=${3:?}
 repo="$root/finetuning-with-sampling"
-python="$root/eval-venv/bin/python"
+python=${FWS_PYTHON:-$root/eval-venv/bin/python}
 num_gpus=$(nvidia-smi -L | wc -l)
 if [[ -e "$out/math" || -e "$out/ood" ]]; then
     echo "$out already holds results; their scripts append, so use a fresh directory" >&2

@@ -8,7 +8,7 @@ root=${1:?usage: raw_prompt_check.sh <fws_dir> <model> <out_dir>}
 model=${2:?}
 out=${3:?}
 repo="$root/finetuning-with-sampling"
-python="$root/eval-venv/bin/python"
+python=${FWS_PYTHON:-$root/eval-venv/bin/python}
 tool="$(cd "$(dirname "$0")" && pwd)/sample_eval.py"
 export VLLM_WORKER_MULTIPROC_METHOD=spawn VLLM_USE_FLASHINFER_SAMPLER=0
 mkdir -p "$out"
