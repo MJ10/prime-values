@@ -15,6 +15,9 @@ currently supported GPU allocations as follows:
 | Mila | `mila` | `main` | 2× A100L |
 | Tamia | `aip-bengioy` | `gpubase_bynode_b2` | one 4× H100 node |
 | Fir | `rrg-bengioy-ad_gpu` or `def-bengioy_gpu` | `gpubase_bygpu_b2` | 2× H100 |
+| Nibi | `rrg-bengioy-ad_gpu` or `def-bengioy_gpu` | `gpubase_bygpu_b2` | 2× H100 |
+| Rorqual | `rrg-bengioy-ad_gpu` or `def-bengioy_gpu` | `gpubase_bygpu_b2` | 2× H100 |
+| Trillium GPU (`trillium-gpu`) | `rrg-bengioy-ad` or `def-bengioy` | chosen by Slurm | one 4× H100 node |
 
 Mila's `main` QOS caps each user at 8 CPUs, 2 GPUs, and 48 GB, so the Mila
 defaults request exactly that. For more, override `--partition`:
@@ -22,9 +25,12 @@ defaults request exactly that. For more, override `--partition`:
 priority, and `long` has no per-user cap but is preemptible. Mila GPU nodes
 hold 4× A100L, 4× L40S, or 8× H100.
 
-On Fir, cluv submits against both allocations and keeps whichever starts first.
-The Tamia and Fir `b2` partitions match the four-hour default and accept jobs up
-to 12 hours. Pair a longer `--time` with the appropriate partition.
+On Fir, Nibi, Rorqual, and Trillium, cluv submits against both allocations and
+keeps whichever starts first; the `rrg-bengioy-ad` allocations usually start
+sooner. The Tamia, Fir, Nibi, and Rorqual `b2` partitions match the four-hour
+default and accept jobs up to 12 hours. Pair a longer `--time` with the
+appropriate partition. Fir, Nibi, and Rorqual allocate individual GPUs, on
+nodes with 4, 8, and 4 H100s respectively; Tamia allocates whole 4× H100 nodes.
 
 Use cluv's remote shell to discover the settings for another connected cluster.
 The output is prefixed with each cluster name:
@@ -39,8 +45,8 @@ To add another SSH alias, define its allocation, partition, GPU request, and any
 cluster-specific paths in `pyproject.toml`:
 
 ```toml
-[tool.cluv.clusters.nibi]
-results_path = "$SCRATCH/prime-values"
+[tool.cluv.clusters.<alias>]
+project_dir = "$SCRATCH/Projects/prime-values"
 sbatch_args = { account = "def-mygroup_gpu", partition = "gpubase_bygpu_b2", gpus-per-node = "h100:2" }
 ```
 
@@ -61,10 +67,12 @@ runs `uv sync --all-extras` on the cluster. Dependencies use the isolated
 `$SCRATCH/.cache/prime-values-uv` cache instead of the shared home uv cache.
 Cluv requires tracked changes to be committed before submission.
 
-On Mila and Tamia, the remote checkout lives at `$SCRATCH/Projects/prime-values`
-so that its `.venv` shares a filesystem with the uv cache and stays out of the
-home quota. Other clusters default to the same path under `$HOME`; set
-`project_dir` in a cluster's `[tool.cluv.clusters.<name>]` table to move it.
+Every configured cluster sets `project_dir`. Without it, cluv derives the
+remote checkout from the local path relative to `$HOME`, which does not exist
+when cluv runs from a git worktree. On Mila, Tamia, Nibi, Rorqual, and Trillium,
+the checkout lives at `$SCRATCH/Projects/prime-values` so that its `.venv`
+shares a filesystem with the uv cache and stays out of the home quota. Fir's
+checkout is `$HOME/Projects/prime-values`.
 
 Tamia compute nodes reach the internet only through the cluster's Squid proxy.
 Its `env` table exports `http_proxy`, `https_proxy`, and a `no_proxy` that keeps
@@ -73,9 +81,29 @@ W&B, and GitHub are reachable through it. A checkout with its `.venv` and uv
 cache takes roughly 180K inodes, so check the scratch file quota with
 `diskusage_report` before the first sync.
 
-Fir's glibc 2.34 is older than the available `mooncake-transfer-engine` wheel
-requires, so the Fir sync omits that package. Standard training and inference
-runs work there; Mooncake-backed disaggregated inference does not.
+Nibi compute nodes reach the internet directly. Rorqual compute nodes reach
+PyPI, GitHub, and W&B only through the Calcul Québec Squid proxy that its `env`
+table exports; the proxy refuses Hugging Face, so that table also sets
+`HF_HUB_OFFLINE=1`. Download models and datasets into the Hugging Face cache on
+the Rorqual login node before submitting.
+
+Trillium's GPU nodes form their own Slurm cluster, so GPU jobs go through the
+`trillium-gpu` login node; the `trillium` CPU login node cannot submit them.
+Trillium allocates either one GPU or whole 4× H100 nodes, routes jobs to its
+partitions itself, rejects `--mem`, and accepts up to 24 hours. Use
+`--partition=debug` for jobs of up to two hours that should start quickly. Its
+`sbatch` defaults to `--export=NONE`, so the cluster's `sbatch_args` set
+`export = "ALL"` to pass cluv's job environment through. Trillium compute nodes
+have no internet access and mount `$HOME` read-only. Its `env` table moves
+`XDG_CACHE_HOME` and `TRITON_CACHE_DIR` to scratch and sets `HF_HUB_OFFLINE=1`
+and `WANDB_MODE=offline`. Download models and datasets on the login node with
+`XDG_CACHE_HOME=$SCRATCH/.cache` set, and upload W&B runs from it with
+`wandb sync`.
+
+Fir, Nibi, Rorqual, and Trillium run glibc 2.34, which is older than the
+available `mooncake-transfer-engine` wheel requires, so their syncs omit that
+package. Standard training and inference runs work there; Mooncake-backed
+disaggregated inference does not.
 
 ## Submit a single-node experiment
 

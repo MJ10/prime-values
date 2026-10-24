@@ -242,9 +242,34 @@ Every cluv `submit` and `sync` first rsyncs all remote run directories to the
 local `$SCRATCH/prime-values`. The launcher excludes `checkpoints/`,
 `broadcasts/`, and `weights/` from that fetch; inspect them on the cluster.
 
-Fir sync excludes `mooncake-transfer-engine` because its available wheel needs
-newer glibc than Fir provides. Non-Mooncake training and inference are
-supported; do not launch Mooncake-backed disaggregated inference on Fir.
+Fir, Nibi, Rorqual, and Trillium syncs exclude `mooncake-transfer-engine`
+because its available wheel needs glibc 2.35 and these clusters run 2.34.
+Non-Mooncake training and inference are supported; do not launch
+Mooncake-backed disaggregated inference there.
+
+Every cluster entry sets `project_dir`; without it cluv derives the remote
+checkout from the local path relative to `$HOME`, which breaks from a git
+worktree. Nibi, Rorqual, and Trillium checkouts are on scratch, Fir's is
+`$HOME/Projects/prime-values`. Fir, Nibi, and Rorqual allocate individual GPUs
+(`h100:N`); Tamia and Trillium allocate whole 4× H100 nodes (Trillium also
+allows exactly one GPU).
+
+Nibi compute nodes have direct internet access. Rorqual compute nodes reach
+PyPI, GitHub, and W&B only through the Squid proxy in its cluv `env`, which
+refuses Hugging Face, so that `env` also sets `HF_HUB_OFFLINE=1`: download
+models on the login node before submitting.
+
+Trillium GPU jobs must be submitted from the `trillium-gpu` login node (the
+cluv cluster name); the `trillium` CPU login node belongs to a different Slurm
+cluster. Trillium `sbatch` rejects `--mem`, accepts 1 or a multiple of 4 GPUs,
+and picks the partition itself; `--partition=debug` (up to 2 hours) starts
+quickly for smoke tests. Its `sbatch` wrapper adds `--export=NONE`, so the
+cluster's `sbatch_args` set `export = "ALL"`; without it, the job script exits
+because `SBATCH_OUTPUT` is missing. Compute nodes have no internet and mount
+`$HOME` read-only, so its `env` moves `XDG_CACHE_HOME` and `TRITON_CACHE_DIR`
+to scratch and sets `HF_HUB_OFFLINE=1` and `WANDB_MODE=offline`. Download
+models on the login node with `XDG_CACHE_HOME=$SCRATCH/.cache` set, and upload
+offline W&B runs with `wandb sync` from the login node.
 
 ## Summary
 
