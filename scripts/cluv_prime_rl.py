@@ -18,8 +18,9 @@ from cluv.remote import Remote
 
 logger = logging.getLogger("cluv")
 cluv_sync = import_module("cluv.cli.sync")
+# These clusters run glibc 2.34; the mooncake-transfer-engine wheel needs 2.35.
 SYNC_EXCLUDED_PACKAGES = {
-    "fir": ("mooncake-transfer-engine",),
+    cluster: ("mooncake-transfer-engine",) for cluster in ("fir", "nibi", "rorqual", "trillium-gpu")
 }
 # Run directories this large stay on the cluster when cluv fetches results.
 RESULT_SYNC_EXCLUDES = ("checkpoints/", "broadcasts/", "weights/")
