@@ -27,21 +27,23 @@ if [[ "${FWS_LOCAL_VENV:-0}" == 1 ]]; then
 fi
 python=${FWS_PYTHON:-$root/eval-venv/bin/python}
 
-# Checkpoints are saved by transformers 5, whose tokenizer_config.json the eval venv's
-# transformers 4.57 cannot read. Training never changes the tokenizer, so a checkpoint is
-# evaluated as its weights and config plus the base model's tokenizer and generation config
-# (what FwS's verl SFT saves alongside its checkpoints).
+# Checkpoints are saved by transformers 5, which the eval venv's transformers 4.57 misreads:
+# it cannot load the tokenizer_config.json, and it silently drops rope_theta (moved into
+# rope_parameters), so the model would run with RoPE base 1e4 instead of Qwen's 1e6. Training
+# never changes the tokenizer or the architecture, so a checkpoint is evaluated as its
+# weights plus the base model's config, tokenizer and generation config (what FwS's verl SFT
+# saves alongside its checkpoints).
 if [[ -d "$model" ]]; then
     base_dir=$("$python" -c \
         "from huggingface_hub import snapshot_download; print(snapshot_download('Qwen/Qwen2.5-3B', local_files_only=True))")
     eval_dir="$out/model"
     mkdir -p "$eval_dir"
-    for file in "$model"/*.safetensors "$model"/model.safetensors.index.json "$model"/config.json; do
+    for file in "$model"/*.safetensors "$model"/model.safetensors.index.json; do
         if [[ -e "$file" ]]; then
             ln -sfn "$file" "$eval_dir/"
         fi
     done
-    for file in tokenizer.json tokenizer_config.json vocab.json merges.txt generation_config.json; do
+    for file in config.json tokenizer.json tokenizer_config.json vocab.json merges.txt generation_config.json; do
         cp -L "$base_dir/$file" "$eval_dir/"
     done
     model="$eval_dir"
