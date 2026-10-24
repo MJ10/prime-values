@@ -81,7 +81,8 @@ W&B, and GitHub are reachable through it. A checkout with its `.venv` and uv
 cache takes roughly 180K inodes, so check the scratch file quota with
 `diskusage_report` before the first sync.
 
-Nibi compute nodes reach the internet directly. Rorqual compute nodes reach
+Nibi compute nodes reach the internet directly. Writes to Nibi scratch are slow,
+so a first sync with a cold uv cache takes about an hour. Rorqual compute nodes reach
 PyPI, GitHub, and W&B only through the Calcul Québec Squid proxy that its `env`
 table exports; the proxy refuses Hugging Face, so that table also sets
 `HF_HUB_OFFLINE=1`. Download models and datasets into the Hugging Face cache on
