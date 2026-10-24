@@ -22,6 +22,7 @@ out=$(cd "$out" && pwd)
 export VLLM_WORKER_MULTIPROC_METHOD=spawn VLLM_USE_FLASHINFER_SAMPLER=0
 export PYTHONPATH="$repo:$repo/grader_utils"
 cd "$repo"
+pids=()
 for ((gpu = 0; gpu < num_gpus; gpu++)); do
     (
         export CUDA_VISIBLE_DEVICES=$gpu
@@ -32,8 +33,9 @@ for ((gpu = 0; gpu < num_gpus; gpu++)); do
                 --batch_idx=$gpu --num_batches=$num_gpus --seed=0 > "$out/${dataset}_$gpu.log" 2>&1
         done
     ) &
+    pids+=($!)
 done
-wait
+for pid in "${pids[@]}"; do wait "$pid"; done
 "$python" - "$out" <<'PY'
 import glob, json, sys
 out = sys.argv[1]

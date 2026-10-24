@@ -3,3 +3,6 @@
 
 [orchestrator.algo]
 type = "grpo"
+
+# Keeps the overlay loadable on its own (tests/unit/test_configs.py).
+[trainer]

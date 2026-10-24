@@ -28,6 +28,10 @@ keep_interval = 125
 batch_size = 512 # 64 prompts x 8 rollouts
 group_size = 8
 
+# The tokenizer's own chat template, via apply_chat_template, as FwS's scripts do.
+[orchestrator.renderer]
+name = "default"
+
 # Temperature 1, so sampling logprobs are the policy's own (gfn needs it; grpo uses
 # the same). The cap and EOS stop match FwS's eval generation, so the training
 # sample space is the eval's.
