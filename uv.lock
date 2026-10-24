@@ -1402,6 +1402,25 @@ http = [
 ]
 
 [[package]]
+name = "fws-math"
+version = "0.1.0"
+source = { editable = "environments/fws_math" }
+dependencies = [
+    { name = "datasets" },
+    { name = "pandas" },
+    { name = "pyarrow" },
+    { name = "verifiers" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "datasets" },
+    { name = "pandas" },
+    { name = "pyarrow" },
+    { name = "verifiers", specifier = ">=0.1.9" },
+]
+
+[[package]]
 name = "general-agent-v1"
 version = "0.1.0"
 source = { editable = "deps/research-environments/environments/general_agent_v1" }
@@ -3971,6 +3990,7 @@ envs = [
     { name = "deepdive-v1" },
     { name = "deepwiki-v1" },
     { name = "forth-lang-v1" },
+    { name = "fws-math" },
     { name = "general-agent-v1" },
     { name = "glossary-v1" },
     { name = "gpqa-v1" },
@@ -4081,6 +4101,7 @@ requires-dist = [
     { name = "flash-attn-4", marker = "extra == 'flash-attn-cute'", git = "https://github.com/Dao-AILab/flash-attention.git?subdirectory=flash_attn%2Fcute&rev=96bd151" },
     { name = "flash-linear-attention", git = "https://github.com/fla-org/flash-linear-attention" },
     { name = "forth-lang-v1", marker = "extra == 'envs'", editable = "deps/research-environments/environments/forth_lang_v1" },
+    { name = "fws-math", marker = "extra == 'envs'", editable = "environments/fws_math" },
     { name = "general-agent-v1", marker = "extra == 'envs'", editable = "deps/research-environments/environments/general_agent_v1" },
     { name = "glossary-v1", marker = "extra == 'envs'", editable = "deps/verifiers/environments/glossary_v1" },
     { name = "gpqa-v1", marker = "extra == 'envs'", editable = "deps/research-environments/environments/gpqa_v1" },

@@ -1,0 +1,11 @@
+{#- Qwen2.5-3B's chat template for one user turn (with its default system prompt), but the
+    assistant turn ends in <|endoftext|> instead of <|im_end|>. This matches verl's SFT
+    target (response + EOS), which FwS trains with, and the EOS-only stop of their eval. -#}
+{{- '<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n' -}}
+{%- for message in messages -%}
+{%- if message['role'] == 'user' -%}
+{{- '<|im_start|>user\n' + message['content'] + '<|im_end|>\n<|im_start|>assistant\n' -}}
+{%- elif message['role'] == 'assistant' -%}
+{{- message['content'] + '<|endoftext|>' -}}
+{%- endif -%}
+{%- endfor -%}

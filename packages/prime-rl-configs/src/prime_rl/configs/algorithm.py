@@ -34,6 +34,7 @@ executes them.
 """
 
 import math
+from pathlib import Path
 from typing import Annotated, Any, ClassVar, Literal, TypeAlias
 
 from pydantic import Field, model_validator
@@ -410,9 +411,30 @@ class GFNAlgoConfig(BaseAlgoConfig):
 
     min_reward: float = Field(1e-4, gt=0, allow_inf_nan=False)
     """Reward floor before the log: the target probability of a zero-reward
-    completion relative to a reward-1 one. With binary rewards, keep it far below
-    ``1 / V^max_completion_tokens`` (``V`` the vocab size), or the many
-    zero-reward completions dominate the target."""
+    completion relative to a reward-1 one. Without a ``prior`` and with binary
+    rewards, keep it far below ``1 / V^max_completion_tokens`` (``V`` the vocab
+    size), or the many zero-reward completions dominate the target. With a
+    ``prior`` the floor scales prior mass instead, so zero-reward completions
+    hold ``min_reward * (1 - p) / p`` of the target relative to the rewarded
+    ones, where ``p`` is the prior's rewarded mass."""
+
+    prior: FrozenModelConfig | None = None
+    """Frozen model whose sequence log-likelihood joins the target:
+    ``log R(x) = log p_prior(x) + log max(reward, min_reward)``, so the policy
+    is trained toward ``p_prior(x) * reward(x)`` (with a 0/1 reward, the prior
+    restricted to rewarded completions). Each sample is prefill-scored under
+    this endpoint. None leaves the target ``∝ reward``."""
+
+    off_policy_path: Path | None = None
+    """JSONL of off-policy completions, one per line as
+    ``{"prompt": <task prompt>, "completion": <text>, "reward": <float>}``. A
+    group whose task prompt matches gains one extra trajectory: the completion
+    (plus EOS) after the group's prompt tokens, scored under the live policy
+    for ``log π`` and with the given reward. The group mean then centers a
+    mixture of on- and off-policy samples, which is still the gradient of the
+    log-variance (VarGrad) form of trajectory balance and has the same
+    minimizer. Environment variables in the path are expanded. None trains
+    on-policy only."""
 
 
 class OPDAlgoConfig(BaseAlgoConfig):
@@ -488,13 +510,7 @@ class SFTAlgoConfig(BaseAlgoConfig):
 
 
 AlgoConfig: TypeAlias = Annotated[
-    GRPOAlgoConfig
-    | EchoAlgoConfig
-    | MaxRLAlgoConfig
-    | GFNAlgoConfig
-    | OPDAlgoConfig
-    | OPSDAlgoConfig
-    | SFTAlgoConfig,
+    GRPOAlgoConfig | EchoAlgoConfig | MaxRLAlgoConfig | GFNAlgoConfig | OPDAlgoConfig | OPSDAlgoConfig | SFTAlgoConfig,
     Field(discriminator="type"),
 ]
 """The training algorithm: sampling plus the per-token training signal (credit

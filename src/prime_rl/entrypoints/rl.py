@@ -317,7 +317,7 @@ def rl_local(config: RLConfig):
         for env in config.orchestrator.train.env:
             algo = env.algo
             assert algo is not None, "TrainEnvConfig.algo must be resolved before launch (inherit_env_algorithms)"
-            for ref in (algo.sampling.source, getattr(algo, "teacher", None)):
+            for ref in (algo.sampling.source, getattr(algo, "teacher", None), getattr(algo, "prior", None)):
                 if isinstance(ref, FrozenModelConfig):
                     frozen_endpoints.append(f"{ref.name} ({', '.join(ref.base_url)})")
         if frozen_endpoints:
