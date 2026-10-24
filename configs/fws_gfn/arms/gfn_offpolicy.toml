@@ -18,5 +18,6 @@ off_policy_path = "$SCRATCH/fws/offpolicy_boosted.jsonl"
 name = "Qwen/Qwen2.5-3B"
 base_url = ["http://localhost:8001/v1"]
 
+# Same lr as grpo and gfn (see gfn.toml).
 [trainer.optim]
-lr = 1e-7
+lr = 1e-6

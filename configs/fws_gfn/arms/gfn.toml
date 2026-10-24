@@ -21,7 +21,8 @@ min_reward = 1e-4
 name = "Qwen/Qwen2.5-3B"
 base_url = ["http://localhost:8001/v1"]
 
-# At initialization π = p_base, so the advantage is log(1/eps) ≈ 9.2 times GRPO's
-# centered 0/1 reward. lr = 1e-6 / 9.2 matches grpo's initial step size.
+# Same lr as grpo. At initialization the advantage is log(1/eps) ≈ 9.2 times grpo's
+# centered 0/1 reward, but Adam normalizes gradient scale, so equal lr gives equal step
+# sizes. (lr 1e-7 left the policy within 0.04 nats of the prior after 13 steps.)
 [trainer.optim]
-lr = 1e-7
+lr = 1e-6
