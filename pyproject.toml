@@ -406,10 +406,11 @@ sbatch_args = [
 
 # Trillium GPU jobs are submitted from its GPU login node. It allocates one GPU or whole 4× H100
 # nodes, picks the partition itself, and rejects --mem. Compute nodes have no internet access and
-# a read-only $HOME. Its sbatch defaults to --export=NONE, which would drop cluv's job environment.
+# a read-only $HOME, so caches move to scratch. Its sbatch defaults to --export=NONE, which would
+# drop cluv's job environment.
 [tool.cluv.clusters.trillium-gpu]
 project_dir = "$SCRATCH/Projects/prime-values"
-env = { HF_HUB_OFFLINE = "1", WANDB_MODE = "offline" }
+env = { XDG_CACHE_HOME = "$SCRATCH/.cache", TRITON_CACHE_DIR = "$SCRATCH/.triton/cache", HF_HUB_OFFLINE = "1", WANDB_MODE = "offline" }
 sbatch_args = [
     { account = "rrg-bengioy-ad", gpus-per-node = "h100:4", mem = "", export = "ALL" },
     { account = "def-bengioy", gpus-per-node = "h100:4", mem = "", export = "ALL" },
