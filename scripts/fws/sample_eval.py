@@ -51,12 +51,15 @@ def sample(args) -> None:
     problems = load_problems(args.fws)
     llm = LLM(model=args.model, gpu_memory_utilization=0.9, seed=args.seed)
     tokenizer = llm.get_tokenizer()
-    prompts = [
-        tokenizer.apply_chat_template(
-            [{"role": "user", "content": p["question"]}], tokenize=False, add_generation_prompt=True
-        )
-        for p in problems
-    ]
+    if args.raw_prompt:
+        prompts = [p["question"] for p in problems]
+    else:
+        prompts = [
+            tokenizer.apply_chat_template(
+                [{"role": "user", "content": p["question"]}], tokenize=False, add_generation_prompt=True
+            )
+            for p in problems
+        ]
     params = SamplingParams(
         n=args.n,
         temperature=args.temperature,
@@ -154,6 +157,7 @@ def main() -> None:
     p.add_argument("--temperature", type=float, required=True)
     p.add_argument("--n", type=int, required=True)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--raw-prompt", action="store_true", help="the question as plain text, without the chat template")
     p.add_argument("--out", required=True)
     p = sub.add_parser("score")
     p.add_argument("--fws", required=True)
