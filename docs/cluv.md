@@ -27,7 +27,11 @@ hold 4× A100L, 4× L40S, or 8× H100.
 
 On Fir, Nibi, Rorqual, and Trillium, cluv submits against both allocations and
 keeps whichever starts first; the `rrg-bengioy-ad` allocations usually start
-sooner. The Tamia, Fir, Nibi, and Rorqual `b2` partitions match the four-hour
+sooner. Upstream cluv reads the copies' `sacct` states in job-id order but
+matches them to submissions in submission order, which can swap them and
+cancel the running copy; `scripts/cluv_prime_rl.py` patches this by querying
+states per job id. Check `squeue` after a submission returns: exactly one copy
+should remain. The Tamia, Fir, Nibi, and Rorqual `b2` partitions match the four-hour
 default and accept jobs up to 12 hours. Pair a longer `--time` with the
 appropriate partition. Fir, Nibi, and Rorqual allocate individual GPUs, on
 nodes with 4, 8, and 4 H100s respectively; Tamia allocates whole 4× H100 nodes.

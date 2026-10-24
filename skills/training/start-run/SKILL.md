@@ -254,6 +254,12 @@ worktree. Nibi, Rorqual, and Trillium checkouts are on scratch, Fir's is
 (`h100:N`); Tamia and Trillium allocate whole 4× H100 nodes (Trillium also
 allows exactly one GPU).
 
+On clusters with two accounts (Fir, Nibi, Rorqual, Trillium) cluv submits one
+copy per account and cancels the rest once one starts. The launcher patches an
+upstream ordering bug that could cancel the running copy instead; after a
+submit returns, `squeue` should show exactly one copy, so cancel any extra
+pending copy by job id.
+
 Nibi compute nodes have direct internet access. Rorqual compute nodes reach
 PyPI, GitHub, and W&B only through the Squid proxy in its cluv `env`, which
 refuses Hugging Face, so that `env` also sets `HF_HUB_OFFLINE=1`: download
