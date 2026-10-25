@@ -118,6 +118,12 @@ uv run scripts/cluv_prime_rl.py submit rorqual --time=4:00:00 \
   -- bash scripts/fws/eval_model.sh <scratch>/fws <run>/weights/step_<N> <out> <scratch>/fws/results/base/suite
 ```
 
+On Mila (where the gfn arms ran), give eval jobs
+`--export=ALL,FWS_LOCAL_VENV=1`. Mila's scratch intermittently fails reads at
+process start, and this runs the eval venv and vLLM's compile cache from
+node-local disk. To resume a run in place from a fresh job, set
+`FWS_OUTPUT_DIR` for `rl_with_prior.sh`.
+
 Pass cluster paths literally: cluv does not expand `$SCRATCH` in program
 arguments. Pass scripts, never inline `bash -c`, because cluv's remote
 quoting mangles inline shell. Jobs hang in W&B's final upload on Rorqual;
