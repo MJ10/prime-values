@@ -1,0 +1,9 @@
+# Sampling SFT as FwS ran it: all 8229 released boosted traces, including 268 MATH500
+# test problems. Traces average 752 tokens with their prompt, so 6 packed 2048-token
+# rows hold about 16 samples; 2 epochs at 16 samples per step is 1029 steps.
+max_steps = 1029
+
+[data]
+# Fir path ($SCRATCH is not expanded here); override with --data.name elsewhere.
+name = "/scratch/mjain/fws/sft/boosted_released"
+batch_size = 6

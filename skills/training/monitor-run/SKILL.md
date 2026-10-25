@@ -154,6 +154,9 @@ A few warnings are normal. Escalate when errors are persistent, growing, or hit 
 - **Orchestrator**: empty/errored rollout spikes, weight-broadcast failures, checkpoint errors.
 - **Trainer**: NCCL/CUDA errors, OOM, NaN loss or gradients.
 - **Inference**: NCCL/CUDA errors, OOM, request timeouts.
+- **Resume after preemption**: with `ckpt.resume_step = -1`, the `rl` launcher resolves the trainer's latest checkpoint and pins the orchestrator to the same step. The orchestrator runs ahead and may hold a later checkpoint (e.g. `run_default/checkpoints/step_200` against trainer `checkpoints/step_150`); that later checkpoint is not used. On preemptible partitions, use a shorter `ckpt.interval` so a requeue repeats fewer steps.
+- **Silent env-load failure**: if an env server raises while loading (see `logs/envs/train/<env>.log`), the orchestrator can sit at "Loading training environments" instead of exiting. Check the env log when no step appears.
+- **Evaluating checkpoints outside this venv**: checkpoints are written by transformers 5, which stores `rope_theta` under `rope_parameters`. Older transformers (e.g. 4.57 in an external eval venv) silently falls back to RoPE base 1e4 and also cannot load the tokenizer config. Pair the checkpoint weights with the base model's `config.json` and tokenizer files, as `scripts/fws/eval_model.sh` does.
 
 ### Process tree
 

@@ -1,0 +1,8 @@
+# Reward maximization: GRPO with a group-mean baseline on the 0/1 math-verify reward.
+# The sanity anchor against FwS's GRPO row (0.457 on MATH(3,4,5)).
+
+[orchestrator.algo]
+type = "grpo"
+
+# Keeps the overlay loadable on its own (tests/unit/test_configs.py).
+[trainer]

@@ -82,6 +82,7 @@ envs = [
     "deepdive-v1",
     "deepwiki-v1",
     "forth-lang-v1",
+    "fws-math",
     "general-agent-v1",
     "glossary-v1",
     "gpqa-v1",
@@ -268,6 +269,7 @@ ifeval-v1 = { path = "deps/research-environments/environments/ifeval_v1", editab
 lean-v1 = { path = "deps/research-environments/environments/lean_v1", editable = true }
 livecodebench-v1 = { path = "deps/research-environments/environments/livecodebench_v1", editable = true }
 logic-env = { path = "deps/research-environments/environments/logic_env", editable = true }
+fws-math = { path = "environments/fws_math", editable = true }
 longcot-mini-v1 = { path = "deps/research-environments/environments/longcot_mini_v1", editable = true }
 longcot-v1 = { path = "deps/research-environments/environments/longcot_v1", editable = true }
 longpdfs-v1 = { path = "deps/research-environments/environments/longpdfs_v1", editable = true }
@@ -378,9 +380,40 @@ partition = "gpubase_bynode_b2"
 gpus-per-node = "h100:4"
 
 [tool.cluv.clusters.fir]
+project_dir = "$HOME/Projects/prime-values"
 sbatch_args = [
     { account = "rrg-bengioy-ad_gpu", partition = "gpubase_bygpu_b2", gpus-per-node = "h100:2" },
     { account = "def-bengioy_gpu", partition = "gpubase_bygpu_b2", gpus-per-node = "h100:2" },
+]
+
+# Nibi allocates individual GPUs on 8× H100 nodes; compute nodes reach the internet directly.
+[tool.cluv.clusters.nibi]
+project_dir = "$SCRATCH/Projects/prime-values"
+sbatch_args = [
+    { account = "rrg-bengioy-ad_gpu", partition = "gpubase_bygpu_b2", gpus-per-node = "h100:2" },
+    { account = "def-bengioy_gpu", partition = "gpubase_bygpu_b2", gpus-per-node = "h100:2" },
+]
+
+# Rorqual allocates individual GPUs on 4× H100 nodes. Compute nodes reach PyPI, GitHub, and
+# W&B only through this Squid proxy, which blocks Hugging Face, so models must be cached first.
+[tool.cluv.clusters.rorqual]
+project_dir = "$SCRATCH/Projects/prime-values"
+env = { http_proxy = "http://squid-compute101.narval.calcul.quebec:3128", https_proxy = "http://squid-compute101.narval.calcul.quebec:3128", no_proxy = "localhost,127.0.0.1,::1,ets1.calculquebec.ca,narval.calcul.quebec", HF_HUB_OFFLINE = "1" }
+sbatch_args = [
+    { account = "rrg-bengioy-ad_gpu", partition = "gpubase_bygpu_b2", gpus-per-node = "h100:2" },
+    { account = "def-bengioy_gpu", partition = "gpubase_bygpu_b2", gpus-per-node = "h100:2" },
+]
+
+# Trillium GPU jobs are submitted from its GPU login node. It allocates one GPU or whole 4× H100
+# nodes, picks the partition itself, and rejects --mem. Compute nodes have no internet access and
+# a read-only $HOME, so caches move to scratch. Its sbatch defaults to --export=NONE, which would
+# drop cluv's job environment.
+[tool.cluv.clusters.trillium-gpu]
+project_dir = "$SCRATCH/Projects/prime-values"
+env = { XDG_CACHE_HOME = "$SCRATCH/.cache", TRITON_CACHE_DIR = "$SCRATCH/.triton/cache", HF_HUB_OFFLINE = "1", WANDB_MODE = "offline" }
+sbatch_args = [
+    { account = "rrg-bengioy-ad", gpus-per-node = "h100:4", mem = "", export = "ALL" },
+    { account = "def-bengioy", gpus-per-node = "h100:4", mem = "", export = "ALL" },
 ]
 
 [tool.ruff.lint]

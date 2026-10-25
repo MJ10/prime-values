@@ -1,0 +1,39 @@
+# SFT baselines in FwS's recipe (their train_sft.sh, run in verl/DFT): lr 5e-5, 2 epochs,
+# 16 samples per step, AdamW (verl's betas 0.9/0.95, weight decay 0.01), cosine schedule
+# with 10 warmup steps, gradient clipping at 1.0, sequences up to 2048 tokens.
+# Compose with one data overlay:
+#   uv run sft @ configs/fws_gfn/sft/base.toml @ configs/fws_gfn/sft/<data>.toml
+# Build the datasets with scripts/fws/sft_data.py.
+#
+# prime-rl packs samples into seq_len-token rows, so a step holds `batch_size` packed
+# rows rather than 16 samples; each overlay sets batch_size to about 16 samples' worth
+# of tokens and max_steps to 2 epochs at 16 samples per step.
+
+[model]
+name = "Qwen/Qwen2.5-3B"
+
+# Assistant turns end in EOS, as in verl's SFT and FwS's EOS-only eval stop.
+[tokenizer]
+chat_template = "configs/fws_gfn/sft_chat_template.jinja"
+
+[data]
+seq_len = 2048
+
+[optim]
+lr = 5e-5
+weight_decay = 0.01
+betas2 = 0.95
+max_norm = 1.0
+
+[scheduler]
+type = "cosine"
+warmup_steps = 10
+
+[ckpt] # Checkpoint at the end of training
+
+[wandb]
+project = "fws-gfn"
+
+[deployment]
+num_gpus = 2
+gpus_per_node = 2

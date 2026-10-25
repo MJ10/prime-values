@@ -1,0 +1,28 @@
+# GFlowNet fine-tuning toward FwS's target, the information projection of the base
+# model onto correct traces: p_C(x) ∝ p_base(x | q) * 1[x correct].
+#   advantage = log 1_eps[correct] + log p_base(x) - log π(x), minus the group mean
+# (on-policy trajectory balance with a group-mean log Z; the reverse-KL gradient
+# toward p_C).
+#
+# Without the prior, gfn would target the uniform distribution over correct traces,
+# which is a different target. With it, the floor eps on the indicator is safe:
+# p_base already normalizes the invalid/incorrect space, so incorrect traces keep
+# eps * (1 - acc) / acc of the target's mass (about 4e-4 at the base model's
+# temperature-1 accuracy of ~0.2), unlike a flat floor over V^L sequences.
+#
+# The prior is a frozen Qwen2.5-3B, prefill-scored per sample like opd's teacher.
+# scripts/fws/rl_with_prior.sh serves it on GPU 0 beside the policy's vLLM.
+
+[orchestrator.algo]
+type = "gfn"
+min_reward = 1e-4
+
+[orchestrator.algo.prior]
+name = "Qwen/Qwen2.5-3B"
+base_url = ["http://localhost:8001/v1"]
+
+# Same lr as grpo. At initialization the advantage is log(1/eps) ≈ 9.2 times grpo's
+# centered 0/1 reward, but Adam normalizes gradient scale, so equal lr gives equal step
+# sizes. (lr 1e-7 left the policy within 0.04 nats of the prior after 13 steps.)
+[trainer.optim]
+lr = 1e-6

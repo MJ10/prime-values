@@ -1,0 +1,6 @@
+# Precision overlay for the Sampling-SFT reproduction only (compose after a boosted_*
+# overlay). FwS's SFT runs in verl/DFT with `model.fsdp_config.model_dtype=bf16`, which
+# loads the weights in bf16 and lets AdamW update them directly, with no fp32 master copy.
+# This matches that. Every other arm keeps the default fp32 optimization dtype.
+[model]
+optimization_dtype = "bfloat16"

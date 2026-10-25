@@ -1,0 +1,8 @@
+# Sampling SFT on the 7961 boosted traces whose problem is in train.parquet (no MATH500
+# test problems). 6 packed rows hold about 16 samples; 2 epochs is 995 steps.
+max_steps = 995
+
+[data]
+# Fir path ($SCRATCH is not expanded here); override with --data.name elsewhere.
+name = "/scratch/mjain/fws/sft/boosted_clean"
+batch_size = 6
