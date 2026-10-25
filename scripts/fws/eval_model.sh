@@ -49,6 +49,11 @@ if [[ -d "$model" ]]; then
     model="$eval_dir"
 fi
 
-bash "$here/eval_fws.sh" "$root" "$model" "$out/fws_eval"
-bash "$here/sample_suite.sh" "$root" "$model" "$out/suite" "$base_suite"
-"$python" "$here/report.py" "$out/suite" "$base_suite" --json "$out/suite/report.json"
+# Stages that already finished (e.g. before a time limit) are skipped on a rerun.
+if [[ ! -f "$out/fws_eval/summary.json" ]]; then
+    bash "$here/eval_fws.sh" "$root" "$model" "$out/fws_eval"
+fi
+if [[ ! -f "$out/suite/report.json" ]]; then
+    bash "$here/sample_suite.sh" "$root" "$model" "$out/suite" "$base_suite"
+    "$python" "$here/report.py" "$out/suite" "$base_suite" --json "$out/suite/report.json"
+fi
