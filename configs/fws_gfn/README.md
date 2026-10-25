@@ -207,7 +207,9 @@ of about 0.016 / 0.05 / 0.02 / 0.012.
   0.6). The gap is unexplained, so gains over their base row are overstated
   by the gap.
 - **MATH500 contamination.** Their released Sampling-SFT data includes 268
-  of the 500 MATH500 problems.
+  of the 500 MATH500 problems (exact string matches; 254 labelled correct,
+  227 boxing MATH500's exact answer string). Reproduce with
+  `python scripts/fws/check_contamination.py <fws_repo>`.
 - **Checkpoint configs.** Checkpoints are written by transformers 5, which
   moved `rope_theta` into `rope_parameters`. FwS's eval venv (transformers
   4.57) silently reads such a config with RoPE base 1e4 instead of Qwen's
