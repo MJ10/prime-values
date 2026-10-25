@@ -152,9 +152,11 @@ and the KLs at temperature 1, in nats over problems the base model solves.
 | Sampling SFT (FwS Table 1) | 0.495 | 0.277 | 0.582 | 0.782 | | | | |
 | Sampling SFT + RL (FwS Table 1) | 0.545 | 0.241 | 0.652 | 0.830 | | | | |
 | **Base, reproduced** | **0.462** | **0.193** | **0.522** | **0.652** | 0.439 | 0.888 | 4.6 | 1.4 |
+| GRPO (ours) | 0.634 | 0.373 | 0.648 | 0.842 | | | | |
+| Sampling SFT, released traces, bf16 (ours) | 0.510 | 0.205 | 0.604 | 0.808 | | | | |
 
-Pending: grpo and the SFT reproductions (trained, being evaluated), and gfn
-and gfn_offpolicy (training).
+Pending: sampler columns for GRPO and Sampling SFT; the other SFT variants
+(trained, being evaluated); and gfn and gfn_offpolicy (training).
 
 ### Caveats
 
