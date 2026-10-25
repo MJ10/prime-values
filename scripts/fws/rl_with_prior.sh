@@ -8,7 +8,8 @@ set -euo pipefail
 
 model=${FWS_PRIOR_MODEL:-Qwen/Qwen2.5-3B}
 port=${FWS_PRIOR_PORT:-8001}
-out=${PRIME_RL_CLUV_OUTPUT_DIR:?run through cluv, or set PRIME_RL_CLUV_OUTPUT_DIR}
+# FWS_OUTPUT_DIR resumes an earlier run in place (a new job gets a new cluv directory).
+out=${FWS_OUTPUT_DIR:-${PRIME_RL_CLUV_OUTPUT_DIR:?run through cluv, or set PRIME_RL_CLUV_OUTPUT_DIR}}
 mkdir -p "$out/logs"
 
 CUDA_VISIBLE_DEVICES=0 inference --model.name "$model" --server.port "$port" \

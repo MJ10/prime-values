@@ -729,6 +729,11 @@ def rl(config: RLConfig):
         if resume_step == -1:
             ckpt_base = ckpt_output_dir if ckpt_output_dir is not None else config.output_dir
             resume_step = resolve_latest_ckpt_step(get_ckpt_dir(ckpt_base))
+            # The orchestrator runs ahead of the trainer and can checkpoint a step the
+            # trainer never reached (e.g. preempted in between). Pin both to the trainer's
+            # latest step instead of letting each resolve "latest" on its own.
+            config.trainer.ckpt.resume_step = resume_step
+            config.orchestrator.ckpt.resume_step = resume_step
 
     if resume_step is not None:
         get_logger().info(f"Resuming from step {resume_step}, cleaning future rollouts and broadcasts")
