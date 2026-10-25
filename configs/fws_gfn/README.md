@@ -152,16 +152,16 @@ and the KLs at temperature 1, in nats over problems the base model solves.
 | Sampling SFT (FwS Table 1) | 0.495 | 0.277 | 0.582 | 0.782 | | | | |
 | Sampling SFT + RL (FwS Table 1) | 0.545 | 0.241 | 0.652 | 0.830 | | | | |
 | **Base, reproduced** | **0.462** | **0.193** | **0.522** | **0.652** | 0.439 | 0.888 | 4.6 | 1.4 |
-| GRPO (ours) | 0.634 | 0.373 | 0.648 | 0.842 | | | | |
+| GRPO (ours) | 0.634 | 0.373 | 0.648 | 0.842 | 0.618 | 0.887 | 37.0 | 119.1 |
 | SFT on expert solutions (ours, fp32, lr 5e-5) | 0.218 | 0.072 | 0.250 | 0.458 | 0.210 | 0.711 | 76.8 | 325.0 |
-| Sampling SFT, released traces, bf16 (ours, FwS recipe) | 0.510 | 0.205 | 0.604 | 0.808 | | | | |
+| Sampling SFT, released traces, bf16 (ours, FwS recipe) | 0.510 | 0.205 | 0.604 | 0.808 | 0.497 | 0.882 | 34.1 | 73.5 |
 | Sampling SFT, clean traces, bf16 (ours, FwS recipe) | 0.503 | 0.217 | 0.570 | 0.777 | 0.495 | 0.891 | 34.0 | 73.2 |
 | Sampling SFT, released traces, fp32, lr 5e-5 | 0.341 | 0.145 | 0.482 | 0.670 | 0.357 | 0.817 | 62.7 | 150.5 |
 | Sampling SFT, clean traces, fp32, lr 5e-5 | 0.363 | 0.157 | 0.408 | 0.673 | 0.360 | 0.824 | 63.3 | 150.4 |
 | Sampling SFT, clean traces, fp32, lr 1e-5 | 0.501 | 0.229 | 0.548 | 0.783 | 0.509 | 0.885 | 36.7 | 88.5 |
 | Sampling SFT, clean traces, fp32, lr 5e-6 | 0.542 | 0.229 | 0.582 | 0.792 | 0.524 | 0.896 | 30.6 | 61.5 |
 
-Pending: the remaining sampler columns, and gfn and gfn_offpolicy (training).
+Pending: gfn and gfn_offpolicy (training).
 
 ### Caveats
 
