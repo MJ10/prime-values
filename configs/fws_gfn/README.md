@@ -153,6 +153,7 @@ and the KLs at temperature 1, in nats over problems the base model solves.
 | Sampling SFT + RL (FwS Table 1) | 0.545 | 0.241 | 0.652 | 0.830 | | | | |
 | **Base, reproduced** | **0.462** | **0.193** | **0.522** | **0.652** | 0.439 | 0.888 | 4.6 | 1.4 |
 | GRPO (ours) | 0.634 | 0.373 | 0.648 | 0.842 | 0.618 | 0.887 | 37.0 | 119.1 |
+| **GFN, base prior, on-policy (ours)** | **0.545** | **0.265** | **0.600** | **0.815** | | | | |
 | SFT on expert solutions (ours, fp32, lr 5e-5) | 0.218 | 0.072 | 0.250 | 0.458 | 0.210 | 0.711 | 76.8 | 325.0 |
 | Sampling SFT, released traces, bf16 (ours, FwS recipe) | 0.510 | 0.205 | 0.604 | 0.808 | 0.497 | 0.882 | 34.1 | 73.5 |
 | Sampling SFT, clean traces, bf16 (ours, FwS recipe) | 0.503 | 0.217 | 0.570 | 0.777 | 0.495 | 0.891 | 34.0 | 73.2 |
@@ -161,7 +162,7 @@ and the KLs at temperature 1, in nats over problems the base model solves.
 | Sampling SFT, clean traces, fp32, lr 1e-5 | 0.501 | 0.229 | 0.548 | 0.783 | 0.509 | 0.885 | 36.7 | 88.5 |
 | Sampling SFT, clean traces, fp32, lr 5e-6 | 0.542 | 0.229 | 0.582 | 0.792 | 0.524 | 0.896 | 30.6 | 61.5 |
 
-Pending: gfn and gfn_offpolicy (training).
+Pending: gfn sampler columns, and gfn_offpolicy (being evaluated).
 
 ### Caveats
 
