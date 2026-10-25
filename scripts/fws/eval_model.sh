@@ -10,9 +10,10 @@ out=${3:?}
 base_suite=${4:?}
 here="$(cd "$(dirname "$0")" && pwd)"
 
-# With FWS_LOCAL_VENV=1, run from a node-local copy of the eval venv. Mila's scratch
-# filesystem intermittently fails file reads when a process starts, and this job starts
-# eight; the copy is retried because the same failure can hit it.
+# With FWS_LOCAL_VENV=1, run from a node-local copy of the eval venv, with vLLM's compile
+# cache on local disk too. Mila's scratch filesystem intermittently fails file reads when a
+# process starts, and this job starts eight; the copy is retried because the same failure
+# can hit it.
 if [[ "${FWS_LOCAL_VENV:-0}" == 1 ]]; then
     for attempt in 1 2 3; do
         if rsync -a "$root/eval-venv/" "${SLURM_TMPDIR:?FWS_LOCAL_VENV needs SLURM_TMPDIR}/eval-venv/"; then
@@ -24,6 +25,8 @@ if [[ "${FWS_LOCAL_VENV:-0}" == 1 ]]; then
         fi
     done
     export FWS_PYTHON="$SLURM_TMPDIR/eval-venv/bin/python"
+    # vLLM's torch.compile cache defaults to ~/.cache/vllm, also on scratch there.
+    export VLLM_CACHE_ROOT="$SLURM_TMPDIR/vllm-cache"
 fi
 python=${FWS_PYTHON:-$root/eval-venv/bin/python}
 
