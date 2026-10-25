@@ -71,7 +71,8 @@ run, in a separate venv):
   evaluated.
 - **Budget.** 250 steps × 64 prompts × 8 rollouts. That is 16,000 prompt
   visits (~2 epochs of 7960, matching FwS's 2-epoch SFT) and 128,000
-  sampled traces. Full fine-tuning, 1 inference + 1 trainer H100.
+  sampled traces. Full fine-tuning on 1 inference + 1 trainer GPU (H100 on
+  Rorqual for grpo, A100 80GB on Mila for the gfn arms).
 
 ## Arms
 
@@ -154,7 +155,7 @@ and the KLs at temperature 1, in nats over problems the base model solves.
 | **Base, reproduced** | **0.462** | **0.193** | **0.522** | **0.652** | 0.439 | 0.888 | 4.6 | 1.4 |
 | GRPO (ours) | 0.634 | 0.373 | 0.648 | 0.842 | 0.618 | 0.887 | 37.0 | 119.1 |
 | **GFN, base prior, on-policy (ours)** | **0.545** | **0.265** | **0.600** | **0.815** | 0.539 | 0.896 | 3.8 | 1.8 |
-| GFN, base prior, + FwS boosted traces off-policy (ours) | 0.541 | 0.289 | 0.568 | 0.815 | | | | |
+| GFN, base prior, + FwS boosted traces off-policy (ours) | 0.541 | 0.289 | 0.568 | 0.815 | 0.532 | 0.901 | 4.1 | 1.8 |
 | SFT on expert solutions (ours, fp32, lr 5e-5) | 0.218 | 0.072 | 0.250 | 0.458 | 0.210 | 0.711 | 76.8 | 325.0 |
 | Sampling SFT, released traces, bf16 (ours, FwS recipe) | 0.510 | 0.205 | 0.604 | 0.808 | 0.497 | 0.882 | 34.1 | 73.5 |
 | Sampling SFT, clean traces, bf16 (ours, FwS recipe) | 0.503 | 0.217 | 0.570 | 0.777 | 0.495 | 0.891 | 34.0 | 73.2 |
@@ -163,7 +164,33 @@ and the KLs at temperature 1, in nats over problems the base model solves.
 | Sampling SFT, clean traces, fp32, lr 1e-5 | 0.501 | 0.229 | 0.548 | 0.783 | 0.509 | 0.885 | 36.7 | 88.5 |
 | Sampling SFT, clean traces, fp32, lr 5e-6 | 0.542 | 0.229 | 0.582 | 0.792 | 0.524 | 0.896 | 30.6 | 61.5 |
 
-Pending: gfn_offpolicy sampler columns.
+Single-shot accuracy on 1024 / 83 / 500 / 1320 problems has a standard error
+of about 0.016 / 0.05 / 0.02 / 0.012.
+
+### Findings
+
+- **gfn approaches FwS's target; the other methods move away from it.** The
+  base model is 4.6 nats (reverse) and 1.4 nats (forward) from `p_C`. gfn
+  moves closer (3.8 reverse) and stays close in forward KL (1.8). Every SFT
+  variant and GRPO ends 30–120 nats away. Sampling SFT is meant to sample
+  `p_C`, but it is 6–8× farther from it than the base model in reverse KL.
+- **On accuracy, gfn matches the best Sampling SFT without expert data.**
+  On-policy gfn uses no expert solutions or boosted traces and scores
+  0.545 / 0.265 / 0.600 / 0.815. FwS's own recipe reproduced here (bf16, lr
+  5e-5) scores 0.510 / 0.205 / 0.604 / 0.808, and the best Sampling-SFT
+  variant (fp32, lr 5e-6) 0.542 / 0.229 / 0.582 / 0.792.
+- **gfn has the highest pass@64** (0.896, and 0.901 with the boosted traces),
+  above GRPO's 0.887. GRPO's mean accuracy is higher but its pass@64 is
+  unchanged from base, as expected of reward maximization.
+- **The boosted traces add little to gfn.** As a ninth off-policy group
+  member they leave accuracy and pass@k about the same and the KLs slightly
+  higher.
+- **GRPO in this framework (0.634) beats FwS's GRPO (0.457) and all
+  Sampling-SFT variants on accuracy.** FwS's GRPO hyperparameters are not
+  given beyond "UFT defaults", so their GRPO row is not a tuned baseline.
+- **FwS's reported gains are measured from a base row that is 0.15 too low.**
+  Against the reproduced base (0.462), Sampling SFT gains about +0.05 on
+  MATH(3,4,5), not +0.18.
 
 ### Caveats
 
@@ -193,3 +220,15 @@ Pending: gfn_offpolicy sampler columns.
 - **Empty completions.** Rollouts that end immediately with EOS are dropped
   as errors by verifiers, so they are excluded from gfn's sample space. This
   is rare.
+- **KL estimates.** Decode and prefill logprobs disagree by about 0.25 nats
+  per sequence (the base model's estimate on problems it never solves), a
+  noise floor for the KL columns. `log Z_q` comes from 32 base samples per
+  problem at temperature 1, and only the 836 problems the base solves at
+  least once count.
+- **Preemptions.** Both gfn runs were preempted on Mila's `long` partition
+  and resumed from checkpoints, repeating up to 50 steps with fresh samples.
+  The final models are still 250 optimizer steps.
+- **Not run.** This study did not run the prior-capability columns (MMLU,
+  GPQA, Chemistry), FwS's `boost_math.py` sampler (Sampling SFT uses their
+  released traces), or Sampling SFT + RL.
+
